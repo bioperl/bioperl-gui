@@ -170,99 +170,99 @@ sub _drawThyselfOnDraft {
 
 
 sub _drawThyselfOnFinished {
-	my ($SCF_GENE) = @_;
-	# SeqCanvasFeatures coming into this routine should be exclusively one of the following:
-	# primary_tag = "gene"
-	# $feature->can('transcripts')  ----> i.e. a GeneStructureI compliant feature
-	# they do NOT have a color,
-	# nor do they have an offset yet.
-	# they must be 'unpacked' into their constituent parts, transcripts, exons, etc. and then mapped
+    my ($SCF_GENE) = @_;
+    # SeqCanvasFeatures coming into this routine should be exclusively one of the following:
+    # primary_tag = "gene"
+    # $feature->can('transcripts')  ----> i.e. a GeneStructureI compliant feature
+    # they do NOT have a color,
+    # nor do they have an offset yet.
+    # they must be 'unpacked' into their constituent parts, transcripts, exons, etc. and then mapped
 	
-	my $SeqCanvas = $SCF_GENE->SeqCanvas;  # this is the parent window into which we are mapping this widget
-										# which is needed to get color and offset information
-	my (@genes, @transcripts, @exons, @promotors, @polyAs, @blank_transcripts);
+    my $SeqCanvas = $SCF_GENE->SeqCanvas; # this is the parent window into which we are mapping this widget
+    # which is needed to get color and offset information
+    my (@genes, @transcripts, @exons, @promotors, @polyAs, @blank_transcripts);
 	
-    push @genes, $SCF_GENE;    # put top-level gene SCF into the list of mapped objects that will be passed back for binding
+    push @genes, $SCF_GENE;	# put top-level gene SCF into the list of mapped objects that will be passed back for binding
 
     # starting with the highest level object - the entire gene
-    $SCF_GENE->offset($SeqCanvas->current_offsets->{"gene"});  # assign standard colors and offsets
+    $SCF_GENE->offset($SeqCanvas->current_offsets->{"gene"}); # assign standard colors and offsets
     $SCF_GENE->color($SeqCanvas->current_colors->{"gene"});
     #  DRAW GENE-LEVEL OBJECT
-    $SCF_GENE->_draw; # this also encapsulates the widget itself into the SCF object
+    $SCF_GENE->_draw;		# this also encapsulates the widget itself into the SCF object
 
     #FIND TRANSCRIPT OBJECTS
-    if ($SCF_GENE->Feature->can("transcripts")) {     # don't do the rest of this routine if it is not a GeneStructureI compliant object.
-		my $model = 0; # ordinal number of transcript (needed for offset calculation)
-		foreach my $transcript($SCF_GENE->Feature->transcripts){ # take each transcript
-			++$model;
-			my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
-														Feature => $transcript,  # this fills all of the FeatureI methods
-														canvas_name => 'finished',
-														canvas => $SeqCanvas->FinishedCanvas,
-														map => $SeqCanvas->FinishedMap,
-														label => $SeqCanvas->label,
-														);  # create a new SeqcanvasFeature object for this feature
-															# it is assigned an FID during creation
-			$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"});  # assign standard color and offset according to ordinal number
-			$SCF->color($SCF->transcript_color); # get the transcript default color
-			$SCF->_draw;
+    if ($SCF_GENE->Feature->can("transcripts")) { # don't do the rest of this routine if it is not a GeneStructureI compliant object.
+	my $model = 0;		# ordinal number of transcript (needed for offset calculation)
+	foreach my $transcript ($SCF_GENE->Feature->transcripts) { # take each transcript
+	    ++$model;
+	    my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
+							Feature => $transcript,	# this fills all of the FeatureI methods
+							canvas_name => 'finished',
+							canvas => $SeqCanvas->FinishedCanvas,
+							map => $SeqCanvas->FinishedMap,
+							label => $SeqCanvas->label,
+						    ); # create a new SeqcanvasFeature object for this feature
+	    # it is assigned an FID during creation
+	    $SCF->offset($SeqCanvas->current_offsets->{"transcript$model"}); # assign standard color and offset according to ordinal number
+	    $SCF->color($SCF->transcript_color); # get the transcript default color
+	    $SCF->_draw;
             $SCF->parent_gene($SCF_GENE);
             push @transcripts, $SCF;
 			
-			foreach my $exon($transcript->exons){
-    			my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
-    														Feature => $exon,  # this fills all of the FeatureI methods
-    														canvas_name => 'finished',
-    														canvas => $SeqCanvas->FinishedCanvas,
-    														map => $SeqCanvas->FinishedMap,
-    														label => $SeqCanvas->label,
-    														);  # create a new SeqcanvasFeature object for this feature
-    															# it is assigned an FID during creation
-    			$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"});  # assign standard offset according to ordinal number
-    			$SCF->color($SeqCanvas->current_colors->{$SCF->source});  # assign color according to the source tag
-    			$SCF->_draw;
-				$SCF->parent_gene($SCF_GENE);
+	    foreach my $exon ($transcript->exons) {
+		my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
+								Feature => $exon, # this fills all of the FeatureI methods
+								canvas_name => 'finished',
+								canvas => $SeqCanvas->FinishedCanvas,
+								map => $SeqCanvas->FinishedMap,
+								label => $SeqCanvas->label,
+							); # create a new SeqcanvasFeature object for this feature
+		# it is assigned an FID during creation
+		$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"}); # assign standard offset according to ordinal number
+		$SCF->color($SeqCanvas->current_colors->{$SCF->source}); # assign color according to the source tag
+		$SCF->_draw;
+		$SCF->parent_gene($SCF_GENE);
             	$SCF->parent_transcript($transcript);
             	push @exons, $SCF;
 				
-			}
-			foreach my $promotor($transcript->promoters){
-    			my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
-    														Feature => $promotor,  # this fills all of the FeatureI methods
-    														canvas_name => 'finished',
-    														canvas => $SeqCanvas->FinishedCanvas,
-    														map => $SeqCanvas->FinishedMap,
-    														label => $SeqCanvas->label,
-    														);  # create a new SeqcanvasFeature object for this feature
-    															# it is assigned an FID during creation
-    			$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"});  # assign standard offset according to ordinal number
-    			$SCF->color($SeqCanvas->current_colors->{$SCF->source});  # assign color by source tag
-    			$SCF->_draw;
-				$SCF->parent_gene($SCF_GENE);
+	    }
+	    foreach my $promotor ($transcript->promoters) {
+		my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
+								Feature => $promotor, # this fills all of the FeatureI methods
+								canvas_name => 'finished',
+								canvas => $SeqCanvas->FinishedCanvas,
+								map => $SeqCanvas->FinishedMap,
+								label => $SeqCanvas->label,
+							); # create a new SeqcanvasFeature object for this feature
+		# it is assigned an FID during creation
+		$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"}); # assign standard offset according to ordinal number
+		$SCF->color($SeqCanvas->current_colors->{$SCF->source}); # assign color by source tag
+		$SCF->_draw;
+		$SCF->parent_gene($SCF_GENE);
             	$SCF->parent_transcript($transcript);
             	push @promotors, $SCF;
-				
-			}
-			if ($transcript->poly_A_site){
-				my $polyA = $transcript->poly_A_site;
-    			my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
-    														Feature => $polyA,  # this fills all of the FeatureI methods
-    														canvas_name => 'finished',
-    														canvas => $SeqCanvas->FinishedCanvas,
-    														map => $SeqCanvas->FinishedMap,
-    														label => $SeqCanvas->label,
-    														);  # create a new SeqcanvasFeature object for this feature
-    															# it is assigned an FID during creation
-    			$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"});  # assign standard offset according to ordinal number
-    			$SCF->color($SeqCanvas->current_colors->{$SCF->source});  # assign color by source tag
-    			$SCF->_draw;
-				$SCF->parent_gene($SCF_GENE);
+		
+	    }
+	    if ($transcript->poly_A_site) {
+		my $polyA = $transcript->poly_A_site;
+		my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
+								Feature => $polyA, # this fills all of the FeatureI methods
+								canvas_name => 'finished',
+								canvas => $SeqCanvas->FinishedCanvas,
+								map => $SeqCanvas->FinishedMap,
+								label => $SeqCanvas->label,
+							); # create a new SeqcanvasFeature object for this feature
+		# it is assigned an FID during creation
+		$SCF->offset($SeqCanvas->current_offsets->{"transcript$model"}); # assign standard offset according to ordinal number
+		$SCF->color($SeqCanvas->current_colors->{$SCF->source}); # assign color by source tag
+		$SCF->_draw;
+		$SCF->parent_gene($SCF_GENE);
             	$SCF->parent_transcript($transcript);
             	push @polyAs, $SCF;
 				
-			}	
-		} # end of foreach my transcripts
-	}  # end of if self can transripts
+	    }	
+	}			# end of foreach my transcripts
+    }				# end of if self can transripts
 
     return (\@genes, \@transcripts, \@exons, \@promotors, \@polyAs);		
 }
@@ -272,15 +272,18 @@ sub _draw {
 	my ($self) = @_;
 	my $map = $self->map;
 	my $canvas = $self->canvas;
-	my $offset = $self->offset;
 	my $FID = $self->FID;
 	my $color = $self->color;
 	my $label;
 	if ($self->has_tag($self->label)){
-		($label) = ($self->label)?$self->each_tag_value($self->label):undef;  # set the label if it is required and present
+	    if ($self->Feature->strand == -1) {
+		$self->offset($self->offset - 5);
+	    }
+	    ($label) = ($self->label)?$self->each_tag_value($self->label):undef;  # set the label if it is required and present
 	} else {
-		$label = undef
+	    $label = undef;
 	}
+	my $offset = $self->offset;
 	my $start = $self->start;
 	my $end = $self->end;
 	my $strand = $self->strand;
