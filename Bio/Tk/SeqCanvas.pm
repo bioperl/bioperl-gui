@@ -180,14 +180,14 @@ GeneMarkHMM" not just "GeneMarkHMM")
     # MAPPING GeneStructureI COMPLIANT FEATURES
     #__________________________________________
     # first create the feature 	
-    my $exon1 = new Bio::SeqFeature::Gene::Exon (-start => 3300, -end => 4000, -primary_tag => "exon", -source => "genscan", -strand => -1);
-    my $exon2 = new Bio::SeqFeature::Gene::Exon (-start => 4400, -end => 6000, -primary_tag => "exon", -source => "genscan", -strand => -1);
-    my $exon3 = new Bio::SeqFeature::Gene::Exon (-start => 3000, -end => 4000, -primary_tag => "exon", -source => "genemark", -strand => -1);
-    my $exon4 = new Bio::SeqFeature::Gene::Exon (-start => 5000, -end => 6000, -primary_tag => "exon", -source => "genemark", -strand => -1);
+    my $exon1 = new Bio::SeqFeature::Gene::Exon (-start => 3300, -end => 4000, -primary => "exon", -source => "genscan", -strand => -1);
+    my $exon2 = new Bio::SeqFeature::Gene::Exon (-start => 4400, -end => 6000, -primary => "exon", -source => "genscan", -strand => -1);
+    my $exon3 = new Bio::SeqFeature::Gene::Exon (-start => 3000, -end => 4000, -primary => "exon", -source => "genemark", -strand => -1);
+    my $exon4 = new Bio::SeqFeature::Gene::Exon (-start => 5000, -end => 6000, -primary => "exon", -source => "genemark", -strand => -1);
     my $polyA = Bio::SeqFeature::Generic->new(-start => 2500, -end => 2800, -primary=> "polyA", -source => "polyA-scan", -strand => -1);
     my $prom = Bio::SeqFeature::Generic->new(-start => 6200, -end => 6500, -primary=> "promoter", -source => "prom-find", -strand => -1);
-    my $transcript = Bio::SeqFeature::Gene::Transcript->new(-start => 2500, -end => 6500, -primary_tag => "transcript", -source => "transcript", -strand => -1);
-    my $transcript2 = Bio::SeqFeature::Gene::Transcript->new(-start => 2500, -end => 6500, -primary_tag => "transcript", -source => "transcript", -strand => -1);
+    my $transcript = Bio::SeqFeature::Gene::Transcript->new(-start => 2500, -end => 6500, -primary => "transcript", -source => "transcript", -strand => -1);
+    my $transcript2 = Bio::SeqFeature::Gene::Transcript->new(-start => 2500, -end => 6500, -primary => "transcript", -source => "transcript", -strand => -1);
     $transcript->add_promoter($prom);
     $transcript->add_exon($exon1, 'initial');
     $transcript->add_exon($exon2, 'terminal');
@@ -198,7 +198,7 @@ GeneMarkHMM" not just "GeneMarkHMM")
     $transcript2->add_exon($exon4, 'terminal');
     $transcript2->poly_A_site($polyA);
     $transcript2->source_tag("EST_evidence");
-    my $Gene = Bio::SeqFeature::Gene::GeneStructure->new(-start => 2500, -end => 6500, -strand => -1, -primary_tag => "Gene", -source => "mark");
+    my $Gene = Bio::SeqFeature::Gene::GeneStructure->new(-start => 2500, -end => 6500, -strand => -1, -primary => "gene", -source => "mark");
     $Gene->add_transcript($transcript);
     $Gene->add_transcript($transcript2);
     #$Gene->add_transcript($transcript8);
