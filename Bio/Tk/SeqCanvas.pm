@@ -897,13 +897,14 @@ sub new {
 					    -sliderlength => 25,
 					    -length => $zoom_scale_length - 80,	# the 80 pixels compensates for the "Zoom" label beside the widget
 					    -width => 10,
-					    -from => 0,
+					    -from => 1,
 					    -to => 100,
 					    -showvalue => 0,
 					    -variable => \$self->{zoom_level},
 					    -command => sub {$self->DoZoom()} );
     $zoomscale->pack(-side => 'left', -expand => 'yes', -fill => 'x', -anchor => 'e');    	
     $self->ZoomBar($zoomscale);
+    $self->{zoom_level} = 5;
 	$self->DoZoom;
     # initialize the canvas with the default rows & colors
     foreach my $source(@{$self->InitialSources}){
@@ -938,6 +939,9 @@ sub new {
 	$self->_addMenus;
 
 	$self->MapFrame->OnDestroy(sub {&localDestroy($self)});
+
+    $self->{zoom_level} = 1;
+	$self->DoZoom;
 
 	# return the object handle	
     return $self;
