@@ -584,7 +584,14 @@ sub subseq {
 sub start {return $_[0]->MapSeq->start; }
 sub end   {return $_[0]->MapSeq->end;   }
 
-sub DESTROY {}
+sub DESTROY { }
+
+sub localDestroy {
+	my ($self) = @_;	
+	if ($self->Menu){eval {$self->Menu->destroy}}
+	if ($self->ReCastMenu){eval {$self->ReCastMenu->destroy}}
+}
+
 
 sub AUTOLOAD {
     no strict "refs";
@@ -877,6 +884,8 @@ sub new {
 
 	$self->_addMenus;
 
+	$self->MapFrame->OnDestroy(sub {&localDestroy($self)});
+
 	# return the object handle	
     return $self;
 }
@@ -912,6 +921,10 @@ sub activeDelete {
 
 sub _addMenus {
 	my ($self) = @_;
+	
+	if ($self->Menu){eval {$self->Menu->destroy}}
+	if ($self->ReCastMenu){eval {$self->ReCastMenu->destroy}}
+	
 	my $canvas = $self->DraftCanvas;
 	my $menu = $canvas->Menu(-type => 'normal', -tearoff => 0);
     my $cm = $menu->Menu(-type => 'normal', -tearoff => 0);

@@ -411,9 +411,11 @@ sub new {
 	$self->query_text->pack(-side => 'left', -expand => 1, -fill => 'x');
 	# end of query frame things.
 
+	# need to eval because the styles are assignedto the external frame, so if multiple browsers are put into a single frame
+	# the styles will collide and crash the browser.
+	eval {$self->frame->ItemStyle('text', -stylename => 'branch', -foreground => $self->leaf_color, -background => $self->background)};
+	eval {$self->frame->ItemStyle('text', -stylename => 'leaf', -foreground => $self->branch_color, -background => $self->background)};
 	
-	$self->frame->ItemStyle('text', -stylename => 'branch', -foreground => $self->leaf_color, -background => $self->background);
-	$self->frame->ItemStyle('text', -stylename => 'leaf', -foreground => $self->branch_color, -background => $self->background);
 
 	$self->browser($self->frame->Scrolled('Tree', 
 					-itemtype   => 'text',
