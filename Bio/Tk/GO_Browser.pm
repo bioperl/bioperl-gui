@@ -31,10 +31,14 @@ consequential or incidental, arising from the use of the software.
 
  sub Begin {
 
- 	# un-comment this line if ontology XML files have NOT already been parsed
- 	#  &ParseOntology;
- 	# =================================================
-    		
+	# un-comment the line below if ontology XML files have NOT already been parsed
+	# this must be done the first time you run this module, and need not be run again
+	# unless you download newer versions of the XML files.
+	#
+	#  &ParseOntology;
+	#
+	# =================================================
+		
  	my $Textbox;
  	my $GO;
     	
@@ -46,14 +50,14 @@ consequential or incidental, arising from the use of the software.
 			# frame with all GO browsers packed together.
  		my $mw = MainWindow->new();
     		
- 			# create new textbox with scrollbars
- 		$Textbox->{$section} = $mw->Scrolled("Text", -background => "black")->pack;
+ 			# create new textbox with scrollbars and relevant pack options
+ 		$Textbox->{$section} = $mw->Scrolled("Text", -background => "black")->pack(-expand => 1, -fill => "both");
     		
- 			# alternate method to create new textbox, NOT RECOMMENDED!!
+ 			# alternate method to create new textbox, NOT RECOMMENDED!!  (Hard to intercept the double-clicks before they highlight the text!!)
  			#$Textbox->{$section} = $mw->Text(-background => "black")->pack; 			
     		
- 			# create new GO browser
- 		$GO->{$section} = GO_Browser->new($Textbox->{$section}, $section);
+ 			# create new GO browser, send it a reference to the MainWindow so that it can send info to title-bar.
+ 		$GO->{$section} = GO_Browser->new($Textbox->{$section}, $section, TopWindow => $mw);
     		
  			# check for failure
  		if ($GO->{$section} == 0){
@@ -116,8 +120,7 @@ Parsing takes about 10-15 minutes, and must be done only once.  The data is then
 by default, live in the same folder as this script.  The files end in the extension .gob, which generally
 represents how I feel about them.
 
-Loading of all three .gob files takes a total of ~13 seconds (single Celeron 500MHz).  Future releases of this
-module will store the data in binary format, which will speed things up considerably.
+Loading of all three .gob files takes a total of ~2 seconds (single Celeron 500MHz).
 
 Please send all complaints to me, but remember, I never promised the world.  This is just a hack :-)
 
@@ -125,6 +128,7 @@ Please send all complaints to me, but remember, I never promised the world.  Thi
 =head2 CONTACT
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
+
 
 =cut
 
@@ -158,6 +162,8 @@ Tk::Widget->Construct('GO_Browser');
                     ObjectType		=> [undef, 			'read/write'],	 # this can be called from a Tk::Text widget, or a Tk::Scrolled("Text") widget, which affects the binding calls in showKeys
                   	Term			=> [undef, 			'read/write'],	 # the GO Ontology term just middle-clicked upon
                   	Definition		=> [undef, 			'read/write'],	 # the definition of the term just middle-clicked upon
+                  	TopWindow		=> [undef, 			'read/write'],
+                  	
                   );
 
    #_____________________________________________________________
@@ -281,6 +287,7 @@ sub showKeys {    # this subroutine prints out the **CHILDREN** of the Key-level
 		$Text->tagConfigure("parent", -foreground => "yellow");
       	$Text->tagBind("parent", "<Double-Button-1>",
       			sub {my $parent = shift @{$self->{path_stack}};   	# take off of the stack the GO:NNN of the parent,
+      				if ($self->TopWindow){$self->TopWindow->configure(-title => $self->GO->{$parent}->{"term"})};
       				$self->showKeys($parent);                        # then call this routine with the parents address
       				}
       			);
@@ -293,24 +300,44 @@ sub showKeys {    # this subroutine prints out the **CHILDREN** of the Key-level
    	
 	foreach my $child(keys(%{$ThisLevel})){					# ask for the sub-level keys--> there are always two:  term and definition
 		if ($child ne "term" && $child ne "definition"){  	# ignore the term and def of the *current* level
+			if ($child eq "genes"){
+				if ($#{$ThisLevel->{"genes"}} == -1){
+					next;  # if there are no asscociated genes then skip this entry
+				} else {
+					my @genes = @{$ThisLevel->{"genes"}};	# get the array of genes
+					foreach my $gene(@genes){
+						chomp $gene;  # ensure one and only one newline character
+						$Text->insert('end', $gene . "\n", [$gene]);           # print it,and tag it with its key GO:nnnnnn
+					    $Text->tagBind($gene, "<Button-2>",
+									sub {
+										$self->Term($gene);
+										$self->Definition("undefined")}
+									);
+						$Text->tagConfigure($gene, -foreground => "lightblue"); 			
+					}
+					next;
+				}
+			}
 			$found = 1;    								# flag that there was a sub-level key found
 			my $term = $ThisLevel->{$child}->{"term"} . "\n";  # take the term phrase of the sub-level
 			$Text->insert('end', $term, [$child]);           # print it,and tag it with its key GO:nnnnnn
 			my $def =  $ThisLevel->{$child}->{"definition"}?$ThisLevel->{$child}->{"definition"}:"No Definition Available"; # take the def phrase of the sub level
 			
 			my @ChildsChildren = (keys %{$ThisLevel->{$child}});	# now query if this child itself has children, or if it is a "leaf"
-			if ($#ChildsChildren > 1){
+			if ($#ChildsChildren > 2){       # if it has more than the default number of tags (3)
 				$Text->tagConfigure($child, -foreground => "red"); # if it is not a leaf, then make it red
 				$Text->tagBind($child, "<Double-Button-1>",
 						sub {                                   # if it is double-clicked, then
 							unshift @{$self->{path_stack}}, $GOkey;  # stick this parent onto the stack to come back to this point later
-							$self->showKeys($child);  # then call the routine using this child as the next root
+							if ($self->TopWindow){$self->TopWindow->configure(-title => $self->GO->{$child}->{"term"})};
+      						$self->showKeys($child);  # then call the routine using this child as the next root
 						 }
 						);
 			} else {
 				$Text->tagConfigure($child, -foreground => "green");  # if it is a leaf, then color it green
 			}
-				
+			
+						
 			$Text->tagBind($child, "<Button-2>",
 						sub {
 							$self->Term($term);
@@ -387,11 +414,11 @@ sub parseOntologyFile {
     	} else {print "================================>> new GO term found $key\n"    # warn if there is a unknown tag
     	}
     	my ($def, $term);	
-    	
+    	my $assoc;  # hash that will contain the association data
+    	    	
     	#get rid of downstream "junk"
-    	if ($thisentry->{"go:association"}){delete $thisentry->{"go:association"}}     # all heavily detailed data is completely removed from the hash to save time and space
-    	
-    	
+    	#if ($thisentry->{"go:association"}){delete $thisentry->{"go:association"}}     # all heavily detailed data is completely removed from the hash to save time and space
+    	    	
     	if (ref $thisentry->{"go:definition"} eq "ARRAY"){
     		$def = $thisentry->{"go:definition"}->[0]; #  I have no idea why this returns an array sometimes...???
     		#print "$def\n";
@@ -406,10 +433,24 @@ sub parseOntologyFile {
     	$term = $thisentry->{"go:name"};
     	$term =~ s/\s\s//g; $term =~ s/^\s//;$term =~ s/\s$//;  # remove leading/trailing extra spaces
     	$term =~ s/\n//g;                     # remove newlines
+											# fill in the details about the child
+    	$GO->{$key}->{"definition"} = $def; # each child is expected to have three reliable keys
+    	$GO->{$key}->{"term"} = $term;      # so create them now.
+    	$GO->{$key}->{"genes"} = [];        # (may not have any, so initialize an empty anon array)
     	
-    	                                                           # fill in the details about the child
-    	$GO->{$key}->{"definition"} = $def;
-    	$GO->{$key}->{"term"} = $term;
+    	if ($thisentry->{"go:association"}){
+    		my @thisass;
+    		if (ref $thisentry->{"go:association"} eq "ARRAY"){
+    			@thisass = @{$thisentry->{"go:association"}};
+    		} else {
+    			push @thisass, $thisentry->{"go:association"};
+    		}
+    		my @genes;
+    		foreach my $ass(@thisass){
+    			push @{$GO->{$key}->{"genes"}}, $ass->{"go:gene_product"}->{"go:symbol"};	
+    			
+    		}
+    	}
     	
     	if (ref $thisentry->{$relation} eq "ARRAY"){    	# if there are multiple parents
     		foreach my $elem(@{$thisentry->{$relation}}){  # for each parent
