@@ -1,11 +1,11 @@
 =head1 NAME
 
-Bio::PSU::Tk::HitDisplay - Frame-based widget for displaying Fasta or
+Bio::Tk::HitDisplay - Frame-based widget for displaying Fasta or
 Blast hits/HSPs with optional text annotation
 
 =head1 SYNOPSIS
 
- use Bio::PSU::Tk::HitDisplay;
+ use Bio::Tk::HitDisplay;
  ...
  $hds = $parent->HitDisplay(?options?);
 
@@ -174,7 +174,7 @@ may redistributed under the same conditions as Perl itself.
 
 =cut
 
-package Bio::PSU::Tk::Hitdisplay;
+package Bio::Tk::Hitdisplay;
 
 use strict;
 use Carp;
