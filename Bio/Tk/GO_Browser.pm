@@ -107,6 +107,7 @@ use Tk;
 use Tk::Text;
 use Carp;
 use DBI;
+use Bio::Tk::GO_Annotation;
 
 use vars qw($AUTOLOAD);
 
@@ -220,17 +221,16 @@ sub new{
     #  OBJECT INITIALIZED
 
     # now fill it
-    my $QueryFrame = $frame->Frame()->pack(-side => 'top', -fill => 'x');
-    my $GOFrame = $frame->Frame()->pack(-side => 'top', -fill => 'both', -expand => 1);
-    my $DefFrame = $frame->Frame()->pack(-side => 'top', -fill => 'both', -expand => 1);
-
-    $QueryFrame->Label(-text => "Query Keywords", -background => 'white', -foreground => 'black')->pack(-side => 'left', -fill => 'x', -expand => 1);
-	$self->QueryText($QueryFrame->Text(-background => 'blue', -foreground => 'white', -height => 1)->pack(-side => 'left', -fill => 'x', -expand => 1));
+    my $QueryFrame = $frame->Frame();
+    my $GOFrame = $frame->Frame();
+    my $DefFrame = $frame->Frame();
+	$QueryFrame->Label(-text => "Query Keywords", -background => 'white', -foreground => 'black')->pack(-side => 'left', -fill => 'x', -expand => 1);
+	$self->QueryText($QueryFrame->Text(-width => "25", -background => 'blue', -foreground => 'white', -height => 1)->pack(-side => 'left', -fill => 'x', -expand => 1));
     $QueryFrame->Button(-text => "Search", -command => sub {$self->query_keywords})->pack(-side => 'right');
     $self->GOText($GOFrame->Scrolled("Text", -background => "black")->pack(-fill => "both", -expand => 1));
-    $self->DefText($DefFrame->Scrolled("Text", -background => 'blue', -foreground => 'white',-height => 3, -wrap => 'word')->pack(-fill => 'both', -expand => 1));
-
-
+    $self->DefText($DefFrame->Scrolled("Text", -width => 25, -background => 'blue', -foreground => 'white',-height => 5, -wrap => 'word')); 
+	$self->DefText->insert("end", "\n\n\n");
+	$self->DefText->pack(-fill => 'both', -expand => 1);
     # retrieve the GO database handle
     my $dbh = $self->dbAccess;
     $self->dbh($dbh);
@@ -245,6 +245,11 @@ sub new{
 												
 	$self->showKeys("GO Ontology", $self->query_root);  # show the keys at root level
 
+	$QueryFrame->pack(-side => 'top', -fill => 'x', -expand => 1);
+    $GOFrame->pack(-side => 'top', -fill => 'both', -expand => 1);
+    $DefFrame->pack(-side => 'top', -fill => 'both', -expand => 1);
+
+	$frame->update;
     return $self;                     # return handle to self
 }
 

@@ -792,7 +792,7 @@ sub MapObjectLabel  {
     #print "x0 = $x0 = $c_start, x1 = $x1 = $c_end\n";
     #print "y0 = $y0 = $c_edge1, y1 = $y1 = $c_edge2\n";
     push @{$tags}, "bioTk_Map_Label";
-    @data = ('-text'=>$label, '-font'=>$font, '-fill'=>$color, '-tags'=>$tags);
+    @data = ('-text'=>$label, '-font'=>$font, '-fill'=>$color, '-tags'=>$tags, '-width'=>0);
     if ($anchor eq 'n')  {
         return $canvas->create('text', ($x0+$x1)/2, $y0, '-anchor' => 's',    #/
 			       '-justify' => 'center', @data);    }

@@ -73,7 +73,7 @@ Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
 =cut
 
 
-package Bio::Tk::GO_Annotation;
+package GO_Annotation;
 
 use strict;
 use Carp;
