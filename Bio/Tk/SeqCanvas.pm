@@ -465,8 +465,8 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
 
                     );
 
-	my $_nextDoffset;
-    my $_nextFoffset;
+	my $_nextDoffset=0;
+    my $_nextFoffset=0;
 					# note that these are encapsulated CLASS properties
     my %colors;		# and thus are constant from one instantiation to the next
     my $_color_pos = 0;
@@ -479,6 +479,7 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
     # Is a specified object attribute accessible in a given mode
     sub _accessible  {
 	my ($self, $attr, $mode) = @_;
+    return 0 unless ($_attr_data{$attr}[1] &&  $mode);
 	$_attr_data{$attr}[1] =~ /$mode/
     }
 
@@ -737,18 +738,15 @@ sub new {
 
 	delete $args{-orientation};
 	
-    foreach (keys %args) {
-        foreach my $attrname ( $self->_standard_keys ) {
-		next if $attrname eq "-orientation";
-	    if (exists $args{$attrname}) {
-		$self->{$attrname} = $args{$attrname} }
-	    elsif ($caller_is_obj) {
-		$self->{$attrname} = $caller->{$attrname} }
-	    else {
-		$self->{$attrname} = $self->_default_for($attrname) }
-        }
+    foreach my $attrname ( $self->_standard_keys ) {
+        next if $attrname eq "-orientation";
+        if (exists $args{$attrname}) {
+            $self->{$attrname} = $args{$attrname} }
+        elsif ($caller_is_obj) {
+            $self->{$attrname} = $caller->{$attrname} }
+        else {
+            $self->{$attrname} = $self->_default_for($attrname) }
     }
-
 	
     $self->SysMess($TOP);	# a handle out to the top-level window system for passing messages
 
@@ -1141,7 +1139,8 @@ sub _examine_DnD_Motion {
 	
 	# we are over an existing widget, but it must be a type that can accept drag and drop
 	my @tags = $dest->gettags($widget); # get the tags from this widget
-	my ($FeatureID, $strand, $source, $start, $stop, $offset, $primary_tag) = _extractTags(\@tags);
+	my ($FeatureID, $strand, $start, $stop, $offset, $primary_tag);
+    ($FeatureID, $strand, $source, $start, $stop, $offset, $primary_tag) = _extractTags(\@tags);
 	return unless ($FeatureID);  # all sorts of things can appear here... so make sure it is a genuine feature
 	
 	my $SCF = $self->AllFeatures($FeatureID);  # get the SeqCanvasFeature for this widget
@@ -1283,8 +1282,7 @@ sub _receiveDropOnWidget {
 sub _receiveDropCreateNewGene {
 	my ($self) = @_;
 	my %features = %{$self->getSelectedFeatures};
-	my $strand;
-	my $start = 0; my $stop = 0; my $strand;  # get the dimensions of the new transcript
+	my $strand;my $start = 0; my $stop = 0;  # get the dimensions of the new transcript
 	foreach my $feature(values %features){
 		next unless $feature;
 		unless ($feature->end < $stop){$stop = $feature->end}
@@ -2160,7 +2158,7 @@ sub _isLabel {
 	if ($canvas eq "draft"){
 		@tags = $self->DraftCanvas->gettags($widgetTkID);
 	} else {
-		@tags, $self->FinishedCanvas->gettags($widgetTkID);
+		@tags = $self->FinishedCanvas->gettags($widgetTkID);
 	}
     foreach my $tag(@tags){
 	if ($tag eq "bioTk_Map_Label"){return 1}

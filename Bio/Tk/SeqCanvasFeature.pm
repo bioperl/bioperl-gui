@@ -274,7 +274,7 @@ sub _draw {
 	my $FID = $self->FID;
 	my $color = $self->color;
 	my $label;
-	if ($self->has_tag($self->label)){
+	if ($self->label && $self->has_tag($self->label)){
 	    if ($self->Feature->strand == -1) {
 		$self->offset($self->offset - 5);
 	    }
@@ -424,5 +424,6 @@ sub gff_string {
 	return $self->Feature->gff_string($format);
 }
 
+sub DESTROY {}
 	
 1;

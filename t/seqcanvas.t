@@ -40,7 +40,7 @@ eval {
 	    my $frame = $top->Frame('-background' => '#ffffff')->pack(-side => 'top', -fill => 'both');
 	    my ($axis_length) = 900;
 
-	    $MapObj = Bio::Tk::SeqCanvas->new($axis_length, $frame, undef, $SeqObj, -orientation => 'vertical'); # $MapObj is a handle to the map objects that you have just created
+	    $MapObj = Bio::Tk::SeqCanvas->new($axis_length, $frame, $top, $SeqObj, -orientation => 'vertical'); # $MapObj is a handle to the map objects that you have just created
 	} else {
 	    print "not ok 2\n";
 	}
