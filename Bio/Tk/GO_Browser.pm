@@ -345,22 +345,23 @@ sub new {
 	unless ($self->host){	
 		my $ua = new LWP::UserAgent;
 		my $req = new HTTP::Request GET => 'http://www.godatabase.org/dev/database/server.cfg';
-        #$req->content('match=www&errors=0');
+	        #$req->content('match=www&errors=0');
 		my $res = $ua->request($req);
 
-        if ($res->is_success) {
-            my $resp =  $res->content;
+		if ($res->is_success) {
+			my $resp =  $res->content;
 			unless ($self->host){
-				my $host = ($resp =~ /\w+\s+(.*)/ && $1);
-				$self->host($host)
+				if ($resp =~ /(\w+)\@(\S+)/){
+					$self->host($2);
+					$self->dbname($1);
+				}
 			}
 		}
 		unless ($self->host){
 			warn "unable to determine host name from BDGP website\n";
 			return 0;
-		}       
+		}
 	}
-	
 	my %connect_hash;
 	if ($self->dbname){$connect_hash{-dbname}=$self->dbname}
 	if ($self->host){$connect_hash{-dbhost}=$self->host}
