@@ -411,7 +411,7 @@ sub MapObject  {
 ##### Skipping options at the moment
 
    ##### Working out boundaries perpendicular to axis #####
-    print "axis loc: $axis_loc   virtual $virt_axis_loc   canvas_min $canvas_min  canvas_max $canvas_max   ataxis $ataxis \n";
+    # print "axis loc: $axis_loc   virtual $virt_axis_loc   canvas_min $canvas_min  canvas_max $canvas_max   ataxis $ataxis \n";
     if (defined($at)) {
     	if (!(ref($at)))  { $canvas_min = $canvas_max = $at; }
     	elsif (ref($at) eq 'ARRAY')  {
@@ -440,7 +440,7 @@ sub MapObject  {
     		 $canvas_max = $canvas_min;
     	}
     }
-    #print "canvas min now $canvas_min\n";
+    # print "canvas min now $canvas_min\n";
     #  else no -at or -ataxis options, so $canvas_min and $canvas_max 
     #    stay as set in $self->{canvas_min} and $self->{canvas_max}
     if ($canvas_min < $canvas_max) {    
