@@ -1,0 +1,154 @@
+This directory contains the intact (at least, intact v.v. what I received from Berkeley)
+contents of the BioTkPerl suite written by Gregg Helt (see the README file for more details).
+
+Several modifications have been made to these modules, mainly dealing with drawing
+vertical maps.  As such, we will designate this:
+
+Bio::TkPerl version 0.81
+
+I have done my best to document the code that I have added.
+These modifications in no way alter the copyright of this software.
+
+
+Mark Wilkinson
+mwilkinson@gene.pbi.nrc.ca
+Sept. 29, 2000
+
+##########  What's in this directory?  ##########
+
+bioTkperl is a port of David Searls' Tcl/Tk bioTk components to TkPerl.
+The map widget also has been extended in some ways.
+
+This is a copy of bioTkperl0.8, which includes a full TkPerl 
+implementation of the bioTk sequence widget, and an almost complete 
+implementation of the bioTk_Map widget, with some added features.  
+It requires perl version 5.001m or higher and the TkPerl extension version 
+b6 or higher (if you only have access to an earlier version of TkPerl, see 
+below for compatibility issues).
+
+Ports of several bioTk demos are included.  SequenceTut is a port of 
+sequence.tut, while MapTut, CosmidTut, GeneticTut, and STSTut are all ports 
+of different pieces of map.tut.  In addition I have included a demo version 
+of an application I have been working on called AnnotP1.  This has 
+served both as a testbed for bioTkperl and as a useful lab tool 
+for analysis of P1 clones being sequenced here at the Drosophila Genome 
+Center.  Data files for one P1 are included -- please do not widely 
+distribute these, as some of the data is both unpublished and extremely 
+tentative.  See the file annotP1_README for more details about features of 
+this prototype application.
+
+Note that I've pretty much given up on guessing where the right version of 
+Perl will be, so you should either add the path to the beginning of each 
+demo, or just invoke them with  "perl name_of_demo"
+
+I've also included a simple wish-like shell, bioTkperl.  So code 
+can be cut-and-pasted from the XxxTut files to a bioTkperl shell to 
+step through the demos.  This should suffice until bioTk_RunTutorial gets 
+ported from the bioTk Tcl version.  Alternatively, you could just run 
+XxxTut under a perl interpreter, but I've found it's much better to 
+demo it interactively in a bioTkperl shell.
+
+
+###########  How to use bioTkperl  ###########
+
+To use bioTkperl commands from perl, the environment variable BIOTKPERL_LIBRARY
+should be set to the directory in which this file resides, e.g. using
+
+  unix% setenv BIOTKPERL_LIBRARY /rubin/gregg/bioTkperl0.8
+
+and the same directory should be added to the @INC array at the beginning of 
+your perl program, e.g. using 
+
+  BEGIN { push(@INC, $ENV{'BIOTKPERL_LIBRARY'}); }
+
+The Tcl version of bioTk includes extensive documentation, which applies 
+equally to the Perl version (the parts that have been ported), except for 
+differences noted below.  The latest Tcl version can be found via anonymous 
+ftp at cbil.humgen.upenn.edu, under /pub/bioTk.tar.Z.  
+
+The bulk of the port is now in Tk/bioTk_Sequence.pm and Tk/bioTk_Map.pm.  
+The bioTk widgets have been reimplemented as Perl classes.  Most procedures 
+from the Tcl version have been replaced with method calls to the widget 
+objects themselves.  The best way to get a feel for this is to look through
+the tutorial demos, and compare them to sequence.tut and map.tut in the 
+Tcl version.  The only part of the API which diverges somewhat from the Tcl 
+version (bioTk1.3) is in the arguments to user-defined icon procedures -- 
+for an example, take a look at the MapRectangle method in bioTk_Map.pm in 
+bioTkperl, vs. the bioTk_MapRectangle proc in map.tcl.  However, in the 
+next release I will probably change this so that the arguments to the Perl 
+icon subs are the same as the arguments to the Tcl procs.
+
+Some procedures that operated only on sequence strings (and not on the 
+display) have become subroutines in a separate file, bioTk_SeqSubs.pm.  There 
+are also a few utilities in Tk/bioTk_Utilities.pm.
+
+
+###########  Status of the port  ############
+
+The bioTk_Sequence widget is complete.
+
+What hasn't been implemented in perl bioTk_Map:
+    In bioTk_MapObject:
+	the -raise option
+	the -apart option
+    General Procedures:
+       bioTk_MapConfigure
+       bioTk_MapCoords
+       bioTk_MapUnset
+
+I don't forsee any problems implementing the rest of bioTk_Map.  I halted 
+work on the straight port once I had enough of it done that I considered it 
+usable, because I wanted to keep the code small while testing it via 
+implementation of a larger-than-tutorial-sized application.  This has helped 
+iron out a number of bugs, and has also pointed out additional features that 
+I would like.  I have started adding some of these.
+
+What's been added in perl bioTk_Map: 
+     in new (equivalent to bioTk_Map), -axis_loc option for specifying 
+               reference axis (independent of any display of an axis)
+     in MapAxis:
+         -tags option for adding arbitrary tags to map items
+         -offset is now relative to location specified in -axis_loc option
+              to new (or defaults to being relative to map boundaries)
+
+     in MapObject:
+         -ataxis option for mapping objects relative to -axis_loc
+         -tags option for adding arbitrary tags to map items, with
+                 substitution mechanism
+         -just_labels binary option, if 1 then only labels are drawn
+         made -at relative to map boundaries, not canvas boundaries
+
+     Zooming, but this is currently a method in AnnotMap, which inherits 
+         from bioTk_Map.  And scale-triggered features are only implemented 
+	 (crudely) in the AnnotP1 application.  I want to push this stuff 
+         down into bioTk_Map soon.
+
+I am hoping to have the rest of bioTk1.3 (general.tcl, help.tcl, 
+and chromosome.tcl) ported by the end of November -- general.tcl and 
+help.tcl should be pretty much straight translation, and chromosome.tcl 
+is pretty small (w/o the data).  After that, I plan to concentrate on 
+various implementations and enhancements of the map widget.
+
+
+######   Compatibility with different versions of TkPerl   ######
+
+    None of this bioTk port is compatible with the earlier implementation of
+TkPerl (which got to version a6 I think) by Malcolm Beattie.  If you have an 
+early version of the _new_ TkPerl by Nick Ing-Simmons (currently at b8), 
+then this code should work, with a few adjustments.  I think it will work 
+unmodified with b6 and higher.  If you're using b1 through b5, you may have 
+to change a few things:
+
+In Tk/bioTk_Map, Tk/AnnotP1, and Tk/bioTk_Sequence, you should change 
+    Tk::Widget->Construct('xxxx')   to   (bless \qw(xxxx))->WidgetClass
+and in the demos/applications, you should change
+    $widget->update    to    Tk::update 
+
+Please alert me to any other backward incompatibilities.
+
+#######
+
+					Let me know what you think,
+					Gregg Helt
+					gregg@fruitfly.berkeley.edu
+

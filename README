@@ -1,0 +1,25 @@
+README for bioperl-gui
+
+This is a group of modules, including most, if not all, of BioTkPerl
+(written by Gregg Helt - see Bio/Tk/README) but also including 
+Bio::Tk::SeqCanvas, a graphical interface to Bioperl Bio::SeqI compliant
+objects.  It includes some documentation, but more is welcome! :)
+
+Installation should follow perl convention, i.e.
+
+perl Makefile.PL
+make
+make test
+make install
+
+This module requires BioPerl and Tk.
+
+Any comments, suggestions, etc. should be directed to the authors,
+Mark Wilkinson <mwilkinson@gene.pbi.nrc.ca>, and David Block
+<dblock@gene.pbi.nrc.ca>.
+
+The wiki docs are available at http://bioinfo.pbi.nrc.ca/dblock/wiki
+
+Have fun!
+
+

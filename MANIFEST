@@ -1,0 +1,15 @@
+Changes
+Makefile.PL
+MANIFEST
+t/seqcanvas.t
+t/testseq.gb
+Bio/Tk/SeqCanvas.pm
+Bio/Tk/README
+Bio/Tk/AnnotMap.pm
+Bio/Tk/BioTkPerl8_1.pm
+Bio/Tk/Tkpsh.pl
+Bio/Tk/bioTk_Map.pm
+Bio/Tk/bioTk_SeqSubs.pm
+Bio/Tk/bioTk_Sequence.pm
+Bio/Tk/bioTk_Utilities.pm
+
