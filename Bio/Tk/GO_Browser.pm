@@ -77,18 +77,7 @@ send me any requests for additional 'toys' you would like to have in this module
 
 =head1 AUTHOR
 
-Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
-
-
-=head1 DISCLAIMER
-
-Anyone who intends to use and uses this software and code acknowledges and
-agrees to the following: The National Research Council of Canada (herein "NRC")
-disclaims any warranties, expressed, implied, or statutory, of any kind or
-nature with respect to the software, including without limitation any warranty
-or merchantability or fitness for a particular purpose.  NRC shall not be liable
-in any event for any damages, whether direct or indirect,
-consequential or incidental, arising from the use of the software.
+Mark Wilkinson (markw@illuminae.com)
 
 =cut
 
@@ -185,8 +174,10 @@ Other methods of GO_Browser are listed below...
       width       => $wide	# optional - default 70
       GO_API      => $apph	# optional - existing API AppHandle
       count       => $count	# optional - "shallow", "deep"; counts # mapped gene products
-      filters     => \@evid # optional - which types of GO evidence codes  to filter out 
+      evcodes     => \@evid # optional - which types of GO evidence codes  to filter out 
                                          when counting defaults to ["IEA"].
+      speciesdb   => \@spec # optional - which of the GO databases to parse by default
+                                         defaults to "all"; (eg:  [FB, MGD, WormBase])
 
 
 =cut
@@ -262,7 +253,8 @@ use vars qw(@ISA @EXPORT); #keep 'use strict' happy
 					path	 		=>	[undef, 	'read/write'],
 					Annotation		=>	[undef, 	'read/write'],
 					count			=>	[undef, 	'read/write'], # count, deep, undef
-					filters			=>	[['IEA'],	'read/write'], # "negative" filter used for evidence types of product count and deep product count	
+					evcodes			=>	[['IEA'],	'read/write'], # "negative" filter used for evidence types of product count and deep product count	
+                    speciesdb		=>	[undef,		'read/write'], # "negative" filter used to restrict db searches	
                     
 					);
 
@@ -381,7 +373,8 @@ sub new {
 		warn "unable to connect to the GO database at " . ($self->host) . "\n";
 		return 0;
 	}
-	$self->GO_API->filters->{evcodes} = $self->filters;  # set the filters for deep/shallow product counts
+	$self->GO_API->filters({evcodes => $self->evcodes}) if (ref($self->evcodes) =~ /array/i);  # set the filters for deep/shallow product counts
+	$self->GO_API->filters({speciesdb => $self->speciesdb}) if (ref($self->speciesdb) =~ /array/i);
 	my $fullroots = $self->GO_API->get_root_term;
 	
 	$self->def_text($self->frame->Scrolled("Text",
