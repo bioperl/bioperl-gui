@@ -837,8 +837,8 @@ sub new {
 
     # now that everything is set up, go ahead and draw the features
     my @features = $self->MapSeq->top_SeqFeatures;
-    my @IDs = $self->mapFeatures("both", \@features); # only the features from a top_SeqFeatures call -> screened for GeneStructure objects in this routine
-
+    my @IDs = @{$self->mapFeatures("both", \@features)}; # only the features from a top_SeqFeatures call -> screened for GeneStructure objects in this routine
+	
     $self->_bindMultiSelection(); # this sets up teh mouse-bindings for the "rubber-band box" that snaps around multiple features
     $self->_setupDrag_n_Drop();  # this sets up the basics of the drag n drop interface
 
@@ -1969,7 +1969,7 @@ sub mapFeatures {
 	# sub objects, such as transcripts and exons, are handled delicately
 	push @IDs, ($self->_mapOntoFinished($features));  # takes an array ref of top-level objects
 
-    return @IDs;  # return the list of FIDxxx to the caller in case they want to know...
+    return \@IDs;  # return the list of FIDxxx to the caller in case they want to know...
 }
 
 sub _mapOntoFinished {
