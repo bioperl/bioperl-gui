@@ -1250,7 +1250,7 @@ sub _bindMultiSelection {
 					$self->dragy1($self->DraftCanvas->canvasy(shift))}, 
 				   Ev('x'), Ev('y')]);   
     $self->DraftCanvas->Tk::bind("<B1-Motion>" =>
-				 [sub {	$self->{rubberbanding} = "true";
+				 [sub {	$self->{rubberbanding} = "true";  # set a flag to distinguish between ruberbanding and drag/drop
 					shift;
 					my $tx2 = shift; my $ty2 = shift;
                                         # the x1/y1 are stored during the button-press event above
@@ -1260,7 +1260,7 @@ sub _bindMultiSelection {
 					my $x2 = $self->DraftCanvas->canvasx($tx2);
 					my $y2 = $self->DraftCanvas->canvasy($ty2);
                                         # delete existing boxse
-					return if (!($x1 && $x2 && $y1 && $y2));
+					return unless ($x1 && $x2 && $y1 && $y2);
 					$self->DraftCanvas->delete("withtag", "multi_box");
 					$self->FinishedCanvas->delete("withtag", "multi_box"); #  "
                                         # create a new one
@@ -1280,7 +1280,7 @@ sub _bindMultiSelection {
 					my ($x1, $x2, $y1, $y2) = ($self->dragx1, 
 								   $self->dragx2, 
 								   $self->dragy1, $self->dragy2);
-					return if (!($x1 && $x2 && $y1 && $y2));
+					return unless ($x1 && $x2 && $y1 && $y2);
 					if ($x1 > $x2){($x1, $x2) = ($x2, $x1)}
 					if ($y1 > $y2){($y1, $y2) = ($y2, $y1)}
 					if (($x2-$x1 < 10 )||($y2 - $y1 < 10)) { # set sensitivity
@@ -1292,8 +1292,7 @@ sub _bindMultiSelection {
 					$self->clearSelections;
 					$self->DraftCanvas->delete("withtag", "multi_box");
 					$self->FinishedCanvas->delete("withtag", "multi_box");
-					$self->DraftCanvas->addtag("group_select", "overlapping", 
-								   $x1, $y1, $x2, $y2);
+					$self->DraftCanvas->addtag("group_select", "overlapping", $x1, $y1, $x2, $y2);
 					$self->selectWithTag(["group_select"], 'draft');
 					$self->DraftCanvas->dtag("all", "group_select");	
 				    },
@@ -1340,9 +1339,7 @@ sub _bindMultiSelection {
 					  $self->clearSelections;
 					  $self->DraftCanvas->delete("withtag", "multi_box");
 					  $self->FinishedCanvas->delete("withtag", "multi_box");
-					  $self->FinishedCanvas->addtag("group_select", 
-									"overlapping", $x1, $y1, 
-									$x2, $y2);
+					  $self->FinishedCanvas->addtag("group_select", "overlapping", $x1, $y1,$x2, $y2);
 					  $self->selectWithTag(["group_select"], 'finished');
 					  $self->FinishedCanvas->dtag("all", "group_select");	
 				      },
@@ -2029,9 +2026,13 @@ sub _extractTags {
 }
 
 sub _isLabel {
-    my ($self, $widgetTkID) = @_;
-    my @tags = $self->DraftCanvas->gettags($widgetTkID);
-    push @tags, $self->FinishedCanvas->gettags($widgetTkID);
+    my ($self, $widgetTkID, $canvas) = @_;
+	my @tags;
+	if ($canvas eq "draft"){
+		@tags = $self->DraftCanvas->gettags($widgetTkID);
+	} else {
+		@tags, $self->FinishedCanvas->gettags($widgetTkID);
+	}
     foreach my $tag(@tags){
 	if ($tag eq "bioTk_Map_Label"){return 1}
     }
@@ -2590,7 +2591,7 @@ sub selectWithTag {
 		elsif (defined $whichmap && $whichmap eq 'draft'){
     		my @widgets = $self->DraftCanvas->find("withtag", $tag);
     		foreach my $widget(@widgets){
-    			if (! $self->_isLabel($widget)){
+    			if (! $self->_isLabel($widget, 'draft')){
         			$self->DraftCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
         			_selectFeature ($self, $self->DraftCanvas, $self->DraftMap, 'multi'); 	# call the routine in multi-mode
 				}
@@ -2599,7 +2600,7 @@ sub selectWithTag {
     		my @widgets = $self->FinishedCanvas->find("withtag", $tag);
     		push @widgets, $self->DraftCanvas->find("withtag", $tag);
     		foreach my $widget(@widgets){
-    			if (! $self->_isLabel($widget)){
+    			if (! $self->_isLabel($widget, 'finished')){
         			$self->FinishedCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
         			_selectFeature ($self, $self->FinishedCanvas, $self->FinishedMap, 'multi'); 	# call the routine in multi-mode
         			$self->DraftCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
