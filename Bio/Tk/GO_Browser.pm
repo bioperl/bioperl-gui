@@ -170,7 +170,7 @@ Other methods of GO_Browser are listed below...
 =head2 new
 
  Title     :	new
- Usage     :	my $GO = GO_Browser_tree->new($frame, %args)
+ Usage     :	my $GO = GO_Browser->new($frame, %args)
  Function  :	return a GO browser object
  Returns   :	Bio::Tk::GO_Browser object
  Args      :	
@@ -219,7 +219,7 @@ Other methods of GO_Browser are listed below...
 
 =cut
 
-package GO_Browser;
+package Bio::Tk::GO_Browser;
 
 use strict;
 use Carp;
