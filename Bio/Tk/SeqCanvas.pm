@@ -1661,7 +1661,7 @@ sub _check_and_expand_draft_canvas {
 	foreach my $current_source($self->Sources){
 		if ($current_source eq $source){  # if the given source exists, then exit this routine ASAP
 			if ($self->{-orientation} eq "horizontal"){
-				print "\aconfigure scroll ",$self->dyb+1,"\n";
+				#print "\aconfigure scroll ",$self->dyb+1,"\n";
 				$canvas->configure(-scrollregion => [1, $self->dya-10, 100,        $self->dyb+10]);
 				$map->configure(-scrollregion =>    [1, $self->dya-10, $self->dxa, $self->dyb+10]);
 				$self->DraftMap->{canvas_min} = $self->dya-10; # inform AnnotMap about the new size for zooming purposes
@@ -2016,7 +2016,7 @@ sub _drawDraftLabels {
     	}	
     }
 	if ($self->{-orientation} eq "horizontal"){
-		print "\aSCROLL ",$self->dyb+10,"\n";
+		#print "\aSCROLL ",$self->dyb+10,"\n";
 		$canvas->configure(-scrollregion => [1, $self->dya-10, 100,        $self->dyb+10]);
     	$map->configure(-scrollregion =>    [1, $self->dya-10, $self->dxa, $self->dyb+10]);
 		$self->DraftMap->{canvas_min} = $self->dya-10; # inform AnnotMap about the new size for zooming purposes
