@@ -2351,7 +2351,7 @@ sub _mapOntoDraft {
     	next if ($feature->primary_tag eq "CDS_span"); 	# these are on strand 0 so should be chucked (or?)
     	next if ($feature->primary_tag eq "intron"); 	# these are simply too ugly to map
     	next if ($feature->primary_tag eq "gene_span");	# these are apparently redundant to the tag "gene"
-    	next if ($feature->primary_tag eq "CDS");
+    	#next if ($feature->primary_tag eq "CDS");    # this had to be removed because embl doesn't have "gene" objects per se, only CDS's that are associated with a gene
     	next if ($feature->primary_tag eq "gene");
 		next if ($feature->primary_tag eq "mRNA");
     	next if ($feature->can("transcripts"));   # don't map genes (::Gene::GeneStructureI compliant objects)
