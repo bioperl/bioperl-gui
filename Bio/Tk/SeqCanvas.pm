@@ -399,13 +399,15 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     FinishedLabelCanvas	=>	[undef,				'read/write'],
                     InitialFinishedLabels=> [['gene'], 			'read/write'],
                     InitialSources		=>  [['hand_annotation'],		'read/write'],
-                    BioPerlFeatureTypes	=>  [{"Exon" 		=> "Bio::SeqFeature::Gene::Exon",
-											  "Intron"		=> "Bio::SeqFeature::Gene::Intron",
-											  "Promoter"	=> "Bio::SeqFeature::Gene::Promoter",
-											  "Poly_A_site"	=> "Bio::SeqFeature::Gene::Poly_A_site",
-											  "UTR"			=> "Bio::SeqFeature::Gene::UTR",
-											  "Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
-											 },					'read/write'],
+                    BioPerlFeatureTypes	=>  [{"Gene" 		=> "Bio::SeqFeature::Gene::GeneStructure",
+					      "Transcript"	=> "Bio::SeqFeature::Gene::Transcript",
+					      "Exon" 		=> "Bio::SeqFeature::Gene::Exon",
+					      "Intron"		=> "Bio::SeqFeature::Gene::Intron",
+					      "Promoter"	=> "Bio::SeqFeature::Gene::Promoter",
+					      "Poly_A_site"	=> "Bio::SeqFeature::Gene::Poly_A_site",
+					      "UTR"			=> "Bio::SeqFeature::Gene::UTR",
+					      "Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
+					     },					'read/write'],
 					Menu				=>  [undef, 			'read/write'],
 					Colors				=>	[{},				'read/write'],  # the colors associated with each source  $Colors{$source} = "color"; Class property
                     colordefs 			=>	[\%colordef,    	'read/write'],
@@ -809,8 +811,8 @@ sub new {
 
     $self->DraftCanvas->Tk::bind('<Enter>', sub { $self->DraftCanvas->Tk::focus; } ); # set focus on the appropriate map when mouse enters
     $self->FinishedCanvas->Tk::bind('<Enter>', sub { $self->FinishedCanvas->Tk::focus; } ); # the space
-    if ($self->_activeDelete eq "on"){$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} )}
-    if ($self->_activeDelete eq "on"){$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} )};
+    if ($self->_activeDelete eq "on"){$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->deleteFeatures([(keys %{$self->getSelectedFeatures})])} )}
+    if ($self->_activeDelete eq "on"){$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->deleteFeatures([(keys %{$self->getSelectedFeatures})])} )};
 	# and now create the maps
     $self->FinishedMap($self->FinishedCanvas->AnnotMap($self->fxa, $self->fya, $self->fxb, $self->fyb, $self->MapArgs));
     $self->DraftMap($self->DraftCanvas->AnnotMap($self->dxa, $self->dya, $self->dxb, $self->dyb, $self->MapArgs));
@@ -895,12 +897,12 @@ sub activeDelete {
 	my ($self, $onoff) = @_;
 	$self->_activeDelete($onoff);
     if ($self->_activeDelete eq "on"){
-		$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} );
+		$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->deleteFeatures([(keys %{$self->getSelectedFeatures})])} );
 	}else {
 		$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {} );
 	}
     if ($self->_activeDelete eq "on"){
-		$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} );
+		$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->deleteFeatures([(keys %{$self->getSelectedFeatures})])} );
 	}else {
 		$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {} );
 	}
@@ -1109,7 +1111,7 @@ sub _bindDropEvent {
 												# deal with it
 												$self->_receiveDropOnWidget($widget);
 											} else {
-												$self->_recevieDropCreateNewGene();
+												$self->_receiveDropCreateNewGene();
 											}
 											});
 
@@ -1124,10 +1126,10 @@ sub _receiveDropOnWidget {
 	my %features = %{$self->getSelectedFeatures};
 	my $start = 0; my $stop = 0; my $strand;  # get the dimensions of the new transcript
 	foreach my $feature(values %features){  # get boundary information and ensure they are all on the same strand.
-		next unless $feature;
-		unless ($feature->end < $stop){$stop = $feature->end}
-		unless ($start){$start = $feature->start}
-		if ($start < $feature->start){$start = $feature->start}
+#		next unless $feature;
+#		unless ($feature->end < $stop){$stop = $feature->end}
+#		unless ($start){$start = $feature->start}
+#		if ($start < $feature->start){$start = $feature->start}
 		if ($strand && ($strand ne $feature->strand)){warn "transcript will cross strands - ignored!"; return 0}
 		else {$strand = $feature->strand} # get strand information from the current feature while we are at it			
 	}	
@@ -1142,29 +1144,31 @@ sub _receiveDropOnWidget {
 	}
 
 	if ($SCF->Feature->can('transcripts')){  # it has been dropped on a Gene-type widget, therefore we want to make a new transcript from it
-		my $Gene = $SCF->Feature;
-		my $Trans = Bio::SeqFeature::Gene::Transcript->new(-start => $start, -end => $stop, -source => "SeqCanvas", -primary => "transcript", -strand => $strand);
+	    my $Gene = $SCF->Feature;
+	    $self->unmapFeatures([$SCF->FID]);
+	    $Gene->add_transcript_as_features(values %features);
+# 		my $Trans = $self->BioPerlFeatureTypes->{Transcript}->new(-start => $start, -end => $stop, -source => "SeqCanvas",
+# 									  -primary => "transcript", -strand => $strand);
 		
-		foreach my $feature(values %features){
-			next unless $feature;
-			#my @tags = $feature->all_tags;
-			#my %taghash;
-			#foreach my $tag(@tags){
-			#	my @values = $feature->each_tag_value($tag);
-			#	$taghash{$tag} = $values[0];
-			#}
-			# my $exon = Bio::SeqFeature::Gene::Exon->new();  # make an exon object
-			# $exon->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
+# 		foreach my $feature(values %features){
+# 			next unless $feature;
+# 			#my @tags = $feature->all_tags;
+# 			#my %taghash;
+# 			#foreach my $tag(@tags){
+# 			#	my @values = $feature->each_tag_value($tag);
+# 			#	$taghash{$tag} = $values[0];
+# 			#}
+# 			# my $exon = Bio::SeqFeature::Gene::Exon->new();  # make an exon object
+# 			# $exon->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
 
-			#-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%
-			if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}
-		}
+# 			#-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%
+# 			if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
+# 			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+# 			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+# 			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}
+# 		}
 		
-		$Gene->add_transcript($Trans);
-		$self->unmapFeatures([$SCF->FID]);
+# 		$Gene->add_transcript($Trans);
 		
 		$self->DropHighlighted(undef);
 		return $self->mapFeatures(undef, [$Gene]);
@@ -1187,7 +1191,7 @@ sub _receiveDropOnWidget {
 		
 		foreach my $feature(values %features){
 			next unless $feature;
-			if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::ExonI")){$Trans->add_exon($feature)}
 			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
 			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
 			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
@@ -1202,7 +1206,7 @@ sub _receiveDropOnWidget {
 }
 
 
-sub _recevieDropCreateNewGene {
+sub _receiveDropCreateNewGene {
 	my ($self) = @_;
 	my %features = %{$self->getSelectedFeatures};
 	my $strand;
@@ -1217,24 +1221,24 @@ sub _recevieDropCreateNewGene {
 	}	
 	foreach my $feature(values %features){  # sanity check - have to be featues of a certain type
 		next unless $feature;
-		unless ($feature->isa("Bio::SeqFeature::Gene::Exon") ||
-				$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
-				$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
-				$feature->isa("Bio::SeqFeature::Gene::UTR")
-			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast features and drop again"; return}
+		unless ($feature->isa($self->BioPerlFeatureTypes->{Exon}) ||
+			$feature->isa($self->BioPerlFeatureTypes->{Poly_A_site}) ||
+			$feature->isa($self->BioPerlFeatureTypes->{Promoter}) ||
+			$feature->isa($self->BioPerlFeatureTypes->{UTR})
+		       ){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast features and drop again"; return}
 	}
 
-	my $Gene = Bio::SeqFeature::Gene::GeneStructure->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");  	
-	my $Trans = Bio::SeqFeature::Gene::Transcript->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");
-	foreach my $feature(values %features){
-		next unless $feature;
-		if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
-		if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
-		if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
-		if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
-	}
-	$Gene->add_transcript($Trans);
-	$self->MapSeq->add_SeqFeature($Gene);
+	my $Gene = $self->BioPerlFeatureTypes->{Gene}->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");  	
+# 	my $Trans = $self->BioPerlFeatureTypes->{Transcript}->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");
+# 	foreach my $feature(values %features){
+# 		next unless $feature;
+# 		if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
+# 		if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+# 		if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+# 		if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
+# 	}
+	$Gene=$self->MapSeq->add_SeqFeature($Gene)||$Gene;  #if new $Gene is returned, use it
+	$Gene->add_transcript_as_features(values %features);
 	$self->DropHighlighted(undef);
 	return $self->mapFeatures(undef, [$Gene]);
 }
@@ -2106,7 +2110,7 @@ sub _mapOntoFinished {
 													canvas => $self->FinishedCanvas,
 													map => $self->FinishedMap,
 													label => $self->label,
-													);  # create a new SeqcanvasFeature object for this feature
+												);  # create a new SeqcanvasFeature object for this feature
 														# it is assigned an FID during creation
 				
 		my ($genes, $transcripts, $exons, $promotors, $polyAs)  = $SCF->drawThyself; # ask it to draw itself on whichever map it is supposed to
@@ -2252,7 +2256,7 @@ sub _mapOntoDraft {
 													offset => $self->current_offsets->{$feature->source_tag},
 													color => $self->current_colors->{$feature->source_tag},
 													label => $self->label,
-													);  # create a new SeqcanvasFeature object for this feature
+			);  # create a new SeqcanvasFeature object for this feature
 				
 		$self->AllFeatures($SCF->FID, $SCF);  # stick this into the local encapsulated hash of all features
 		$SCF->drawThyself;                    # ask it to draw itself on whichever map it is supposed to
@@ -2264,6 +2268,27 @@ sub _mapOntoDraft {
 	return @MappedIDs;	                      # return them to the mapFeatures call
 }
 
+
+sub deleteFeatures {
+    my ($self, $FeatureIDs) = @_;
+    foreach my $FeatureID (@$FeatureIDs){
+    	my $SCF = $self->AllFeatures($FeatureID); 		# get the SCF (SeqCanvasFeature) object
+	next unless $SCF;
+	my $transcriptobj=$SCF->parent_transcript;
+	my $geneobj=$SCF->parent_gene;
+	my $transcript=$transcriptobj ? $transcriptobj->Feature : undef;
+	my $gene=$geneobj ? $geneobj->Feature : undef;
+	if ($gene) {
+	    my $unmapped=$self->unmapFeatures([$geneobj->FID]);
+	    return unless $unmapped;
+	    $self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);
+	    $self->mapFeatures(undef,[$gene]);
+	} else {
+	    my $unmapped=$self->unmapFeatures([$FeatureID]);
+	    $self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);
+	}
+    }
+}
 
 =head2 unmapFeatures
 
@@ -2284,34 +2309,38 @@ sub unmapFeatures {
     my @FeatureIDs = @{$FeatureIDs};
     my (@unmappedFeatures);
     if ($#FeatureIDs == -1) {return \@unmappedFeatures};
-		
-	$self->DraftCanvas->toplevel->Busy;
+
+    $self->DraftCanvas->toplevel->Busy;
     $self->clearSelections;
     foreach my $FeatureID (@FeatureIDs){
     	my $SCF = $self->AllFeatures($FeatureID); 		# get the SCF (SeqCanvasFeature) object
-		my $unmappedFeature = $SCF->Feature;	  		# retrieve the BioPerl Feature object
-		foreach my $subfeature($self->_getAllSubFeatures($unmappedFeature)){   # now get any and all subfeatures and unmap them
-    		my $SCF = $self->translateFeatureIntoSCF($subfeature);  # we need the FID to delete it, so retrieve the SCF for that feature
-    		next unless $SCF;
-			# now we want to delete it, but only if it is represented only once!	
-			# This subroutine only deletes them if they are represented by a single canvas widget
-			# thus it is possible to unmap e.g. an exon in a transcript without removing that exon
-			# from the underlying Sequence object if it is also represented in a second transcript
-			$self->_deleteFeatureFromSeqObject($subfeature); # get rid of the reference in the Seq object
-			$self->DraftCanvas->delete($SCF->FID);     # delete the widgets by their ID
-    		$self->FinishedCanvas->delete($SCF->FID);
-    		push @unmappedFeatures, $SCF->Feature;# get the feature
-    		$self->AllFeatures($SCF->FID, undef);	  # and remove it from the feature list
-		}	
-    	$self->DraftCanvas->delete($FeatureID);         # delete the map widget, where
-    	$self->FinishedCanvas->delete($FeatureID);		# it might be on either canvas...
-    	my $SCF = $self->AllFeatures($FeatureID); 		# get the SCF (SeqCanvasFeature) object
-		$self->_deleteFeatureFromSeqObject($unmappedFeature);
-		push @unmappedFeatures, $unmappedFeature;    # and extract the BioPerl Feature object from it to send back to the caller
-		$self->AllFeatures($FeatureID, undef);    # delete the SCF from the encapsulated hash
+	next unless $SCF;
+	my $unmappedFeature = $SCF->Feature;	  		# retrieve the BioPerl Feature object
+	my (%SubFeatureList,@Sortedlist);
+	foreach ($self->_getAllSubFeatures($unmappedFeature)) {
+	    $SubFeatureList{$_}=$_;
 	}
-	$self->DraftCanvas->toplevel->Unbusy;
-		
+	foreach my $typevar (qw(Gene Transcript)) {           #we are going to sort these features into bins
+	    foreach (keys %SubFeatureList) {
+		if ($SubFeatureList{$_}->isa($self->BioPerlFeatureTypes->{$typevar})) {     #genes first, then transcripts
+		    push @Sortedlist,$SubFeatureList{$_};
+		    delete $SubFeatureList{$_};
+		}
+	    }
+	}
+	push @Sortedlist, values %SubFeatureList;  #Whatever is left goes in at the end
+	foreach my $subfeature (reverse @Sortedlist) {   # now get any and all subfeatures and unmap them
+	    foreach my $SCF ($self->translateFeatureIntoSCF($subfeature)) {  # we need the FID to delete it, so retrieve all the SCFs for that feature
+		next unless $SCF;
+		$self->DraftCanvas->delete($SCF->FID);     # delete the widgets by their ID
+		$self->FinishedCanvas->delete($SCF->FID);
+		push @unmappedFeatures, $SCF->Feature;# get the feature
+		$self->AllFeatures($SCF->FID, undef);	  # and remove it from the feature list
+	    }
+	}
+    }
+    $self->DraftCanvas->toplevel->Unbusy;
+    
     return \@unmappedFeatures
 }
 
@@ -2321,14 +2350,15 @@ sub translateFeatureIntoSCF {
 	# presuming that a SeqCanvasFeature already *exists* for that Feature object
 	# else returns undef
 	my ($self, $feature) = @_;
-	my $x = scalar($feature);  # convert incoming feature to a scalar
+	my @SCF;
+	my $x = scalar $feature;  # convert incoming feature to a scalar
 	while (my ($FID, $SCF) = each %{$self->AllFeatures}){ # iterate through the known feature hash
-		my $y = scalar($SCF->Feature);  # make a scalar from each feature
+		my $y = scalar $SCF->Feature;  # make a scalar from each feature
 		if ($x eq $y){
-			return $SCF;
+			push @SCF, $SCF;
 		}
 	}
-	return undef;
+	return @SCF;
 }
 
 =head2 getSelectedIDs

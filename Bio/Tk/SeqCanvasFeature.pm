@@ -63,7 +63,6 @@ use vars qw($AUTOLOAD);
                   	map			=>	[undef, 	'read/write'],	# the map widget reference
                   	widget		=>	[undef, 	'read/write'],		# the widget itself
                   	FID			=>	[undef,  'read/write'],			# the FeatureID, which is the position of that feature in the list of mapped features.
-                  	type		=>	[undef,  'read/write'],			# generic, gene, transcript
                   	label		=>  [undef,  'read/write'], 		# which tag should be used as the label fo the mapped widget                 	
                     tags		=>  [[], 	'read/write'],
                     transcript_color => ["#dddddd",  'read/write'], # transcripts are grey
