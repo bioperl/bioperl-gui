@@ -89,8 +89,8 @@ use vars qw($AUTOLOAD);
                   	id 	=>	[undef, 	'read/write'],
                   	def	=>	[undef,		'read/write'],
                   	term=>	[undef, 	'read/write'],
-                  	synonyms => [[], 	'read/write'],  # not currently supported
-                  	evidence => [{}, 	'read/write'],
+                  	synonyms => [undef, 	'read/write'],  # not currently supported
+                  	evidence => [undef, 	'read/write'],
                   	GO_id => [undef, 	'read/write'],
                   	
                     );
@@ -203,7 +203,7 @@ sub id {
 	return 0 if (!($id =~ /^\d{1,7}$/)); # from one to seven digits and nothing else will do!
 	
 	my $GO_id = sprintf "GO:%07u", $id;
-	$self->{id}= $id;
+	$self->{id} = $id;
 	$self->{GO_id} = $GO_id;
 	return $id;
 }	
@@ -223,7 +223,7 @@ sub GO_id {
 	return 0 if (!($GO_id =~ /GO:\d{7}/));   # if they are trying to set it using an invalid string, then ignore the call
 	
 	my $id = ($GO_id =~ /GO:0*(\d+)/) && $1;  # get the number part of the identifier
-	$self->{id}= $id;
+	$self->{id} = $id;
 	$self->{GO_id} = $GO_id;
 	return $GO_id;
 	
@@ -252,13 +252,14 @@ sub addEvidence {
 	my ($self, $code, $refs) = @_;
 	return 0 if (!$code);
 	return -1 if (!($code =~ /IMP|IGI|ISS|IPI|IDA|IEP|IEA|TAS|NAS|NA/));
-	if (!(${$self->{evidence}}{$code})){
-		${$self->{evidence}}{$code} = undef
-	};
-	if ($refs){
-		push @{${$self->{evidence}}{$code}}, @{$refs}
+	if (!(defined $self->evidence)){$self->evidence({})}
+  	if (!(${$self->evidence}{$code})){
+  		${$self->evidence}{$code} = undef
+  	};
+  	if ($refs){
+  		push @{${$self->evidence}{$code}}, @{$refs}
 	
-	};
+  	};
 	
 	return 1;
 
@@ -278,10 +279,11 @@ sub addReference {
 	my ($self, $code, $refs) = @_;
 	return 0 if (!$code || !$refs);
 	return -1 if (!($code =~ /IMP|IGI|ISS|IPI|IDA|IEP|IEA|TAS|NAS|NA/));
-	if (!(${$self->{evidence}}{$code})){
-		${$self->{evidence}}{$code} = undef
+	if (!(defined $self->evidence)){$self->evidence({})}
+  	if (!(${$self->evidence}{$code})){
+		${$self->evidence}{$code} = undef
 	};
-	push @{${$self->{evidence}}{$code}}, @{$refs};
+	push @{${$self->evidence}{$code}}, @{$refs};
 	
 	return 1;
 
