@@ -189,6 +189,8 @@ Other methods of GO_Browser are listed below...
       width       => $wide	# optional - default 70
       GO_API      => $apph	# optional - existing API AppHandle
       count       => $count	# optional - "shallow", "deep"; counts # mapped gene products
+      filters     => \@evid # optional - which types of GO evidence codes  to filter out 
+                                         when counting defaults to ["IEA"].
 
 
 =cut
@@ -244,10 +246,10 @@ use vars qw(@ISA @EXPORT); #keep 'use strict' happy
     my %_attr_data = #     				DEFAULT    	ACCESSIBILITY
                   (	TopWindow		=>	[undef, 	'read/write'],
 					dbname 			=>	["go", 		'read/write'],
-					host 			=>	[undef, 'read/write'],
-					dbuser			=>  [undef, 'read/write'],
-					dbauth			=>  [undef, 'read/write'],
-					leaf_color		=>	["darkgreen", 	'read/write'],
+					host 			=>	[undef, 	'read/write'],
+					dbuser			=>  [undef, 	'read/write'],
+					dbauth			=>  [undef, 	'read/write'],
+					leaf_color		=>	["darkgreen",'read/write'],
 					branch_color	=>	["red",		'read/write'],
 					background		=>	["white", 	'read/write'],
 					textbg			=>	["darkblue",'read/write'],
@@ -264,8 +266,9 @@ use vars qw(@ISA @EXPORT); #keep 'use strict' happy
 					path	 		=>	[undef, 	'read/write'],
 					Annotation		=>	[undef, 	'read/write'],
 					count			=>	[undef, 	'read/write'], # count, deep, undef
-					
-                    );
+					filters			=>	[['IEA'],	'read/write'], # "negative" filter used for evidence types of product count and deep product count	
+                    
+					);
 
    #_____________________________________________________________
 
@@ -382,7 +385,7 @@ sub new {
 		warn "unable to connect to the GO database at " . ($self->host) . "\n";
 		return 0;
 	}
-	
+	$self->GO_API->filters->{evcodes} = $self->filters;  # set the filters for deep/shallow product counts
 	my $fullroots = $self->GO_API->get_root_term;
 	
 	$self->def_text($self->frame->Scrolled("Text",
