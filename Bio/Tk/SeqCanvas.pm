@@ -1315,7 +1315,8 @@ sub mapFeatures {
 		$strand =~ s/-$/-1/;                    # But really... BioPerl should adopt GFF formats one day -  The GFF designations are
 		$strand =~ s/\./0/;	                    # much more intuitive (IMHO)
 		
-		if ($feature->has_tag("id")){push @tags, "DB_ID " . $feature->each_tag_value("id")}  # this is to 'link' this widget to an an external database if desired.
+		if ($feature->has_tag("id")){my ($value) = $feature->each_tag_value("id");
+									push @tags, "DB_ID " . $value}  # this is to 'link' this widget to an an external database if desired.
 																						#  DB_ID should be the unique index number of that DB entry
 		push @tags, "Source $source";           # push the source so that we can retrieve the offset and color later if necessary
 		push @tags, "Strand $strand";
@@ -1331,7 +1332,7 @@ sub mapFeatures {
 							$map->MapObject(\@coords, '-ataxis' => $offset,
 								'-color' => $color, '-tags' => \@tags);
 			} else {
-				my $label = $feature->each_tag_value($self->label);              # if the user has defined a tag they wish to label, and if that tag exists, then create a label
+				my ($label) = $feature->each_tag_value($self->label);              # if the user has defined a tag they wish to label, and if that tag exists, then create a label
 				$map->MapObject(\@coords, '-ataxis' => $offset, '-label' => $label, '-labelcolor' => $color,
 								'-color' => $color, '-tags' => \@tags);
 			}
@@ -1342,7 +1343,7 @@ sub mapFeatures {
 				$map->MapObject(\@coords, '-ataxis' => -$offset,
 								'-color' => $color, '-tags' => \@tags);
 			} else {
-				my $label = $feature->each_tag_value($self->label);
+				my ($label) = $feature->each_tag_value($self->label);
 				$map->MapObject(\@coords, '-ataxis' => -$offset, '-label' => $label, '-labelcolor' => $color,
 								'-color' => $color, '-tags' => \@tags);
 			}
