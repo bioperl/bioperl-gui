@@ -1157,28 +1157,6 @@ sub _receiveDropOnWidget {
 	    my $Gene = $SCF->Feature;
 	    $self->unmapFeatures([$SCF->FID]);
 	    $Gene->add_transcript_as_features(values %features);
-# 		my $Trans = $self->BioPerlFeatureTypes->{Transcript}->new(-start => $start, -end => $stop, -source => "SeqCanvas",
-# 									  -primary => "transcript", -strand => $strand);
-		
-# 		foreach my $feature(values %features){
-# 			next unless $feature;
-# 			#my @tags = $feature->all_tags;
-# 			#my %taghash;
-# 			#foreach my $tag(@tags){
-# 			#	my @values = $feature->each_tag_value($tag);
-# 			#	$taghash{$tag} = $values[0];
-# 			#}
-# 			# my $exon = Bio::SeqFeature::Gene::Exon->new();  # make an exon object
-# 			# $exon->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
-
-# 			#-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%
-# 			if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
-# 			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
-# 			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
-# 			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}
-# 		}
-		
-# 		$Gene->add_transcript($Trans);
 		
 		$self->DropHighlighted(undef);
 		return $self->mapFeatures(undef, [$Gene]);
@@ -1201,10 +1179,10 @@ sub _receiveDropOnWidget {
 		
 		foreach my $feature(values %features){
 			next unless $feature;
-			if ($feature->isa("Bio::SeqFeature::Gene::ExonI")){$Trans->add_exon($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
+			if ($feature->isa($self->BioPerlFeatureTypes->{Exon})){$Trans->add_exon($feature)}
+			if ($feature->isa($self->BioPerlFeatureTypes->{Poly_A_site})){$Trans->poly_A_site($feature)}
+			if ($feature->isa($self->BioPerlFeatureTypes->{Promoter})){$Trans->add_promoter($feature)}
+			if ($feature->isa($self->BioPerlFeatureTypes->{UTR})){$Trans->add_utr($feature)}			
 		}
 			
 		$self->unmapFeatures([$Gene->FID]);

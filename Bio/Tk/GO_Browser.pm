@@ -357,7 +357,7 @@ sub new {
 	unless ($self->host){	
 		my $ua = new LWP::UserAgent;
 		my $req = new HTTP::Request GET => 'http://www.fruitfly.org/annot/go/database/server.cfg';
-        $req->content('match=www&errors=0');
+        #$req->content('match=www&errors=0');
 		my $res = $ua->request($req);
 
         if ($res->is_success) {
