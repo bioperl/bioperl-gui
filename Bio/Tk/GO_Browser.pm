@@ -345,12 +345,11 @@ sub showKeys {    # this subroutine prints out the **CHILDREN** of the Key-level
 						);
 			
 			if ($self->ObjectType eq "Scrolled"){     # use this if called as a Scrolled text widget
-				$Text->Subwidget("text")->bindtags(['all',           # limit the recusion of the double-click to
-													'.',             # be ignored by the Tk::Text widget itself
-													'.frame.text',   # but is picked up by the Scrolled widget (which is a frame object)
-													$child,
-													'parent',
-													'root']);
+				my @bindings = $Text->Subwidget("text")->bindtags();
+				shift @bindings;  # get rid of the Tk::Text binding itself to prevent highlighting of the sequence
+				unshift @bindings, $child;
+				
+				$Text->Subwidget("text")->bindtags(\@bindings);
 			} else {									# use this if called as a normal text widget
 				$Text->bindtags(['all',
 								'.',
