@@ -576,6 +576,10 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
     }
 }
 
+sub Tk::Error {
+	Tk->break;
+}
+
 sub subseq {
     my ($self,@args)=@_;
     return $self->MapSeq->subseq(@args);
@@ -590,6 +594,9 @@ sub localDestroy {
 	my ($self) = @_;	
 	if ($self->Menu){eval {$self->Menu->destroy}}
 	if ($self->ReCastMenu){eval {$self->ReCastMenu->destroy}}
+    eval {$self->FinishedCanvas->destroy};
+    eval {$self->DraftCanvas->destroy};
+    eval {$self->destroy};
 }
 
 
@@ -922,8 +929,8 @@ sub activeDelete {
 sub _addMenus {
 	my ($self) = @_;
 	
-	if ($self->Menu){eval {$self->Menu->destroy}}
-	if ($self->ReCastMenu){eval {$self->ReCastMenu->destroy}}
+	#if ($self->Menu){eval {$self->Menu->destroy}}
+	#if ($self->ReCastMenu){eval {$self->ReCastMenu->destroy}}
 	
 	my $canvas = $self->DraftCanvas;
 	my $menu = $canvas->Menu(-type => 'normal', -tearoff => 0);
@@ -940,7 +947,7 @@ sub _addMenus {
 
 	my $f = $menu->add(
 		'cascade',
-		-label => '~Re-Cast Selected As',
+		-label => 'Re-Cast Selected As',
 		-menu => $cm
 		);
     
