@@ -322,6 +322,7 @@ sub _parse_feature_info {
     my $type = $self->primary_tag;
     my $strand = $self->strand;
     my $whichmap = $self->canvas_name;
+	my $ObjectType = ref($self->Feature);
     my $FID = $self->FID;
     $strand =~ s/\+/1/;                     # these change GFF format strand designations into BioPerl Seq object strand desig.
     $strand =~ s/-$/-1/;                    # But really... BioPerl should adopt GFF formats one day -  The GFF designations are
@@ -335,9 +336,9 @@ sub _parse_feature_info {
     push @tags, "_SC_start $start";
     push @tags, "_SC_stop $stop";
     push @tags, "_SC_offset $offset";
+	push @tags, "ObjectType $ObjectType";
     push @tags, "M_Ftr";					# this is a generic tag to indicate that this is a mapped feature - used to obtain the bounding box for mapped features which then sets the scrollregion
-    return (@tags);  # this is formatted to fit perfectly into the _drawFeature routine below
-
+    return (@tags);  
 }
 
 

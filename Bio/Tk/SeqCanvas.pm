@@ -323,7 +323,7 @@ use Tk::DragDrop;
 use Tk::DropSite;
 use Carp;
 use Bio::Tk::AnnotMap;
-use Tk::widgets qw(ColorEditor);
+use Tk::widgets qw(ColorEditor Dialog);
 use Bio::SeqI;
 use Bio::SeqIO;
 #use Bio::SeqFeature::Gene::Exon; deprecated
@@ -1140,17 +1140,39 @@ sub _receiveDropOnWidget {
 #		unless ($feature->end < $stop){$stop = $feature->end}
 #		unless ($start){$start = $feature->start}
 #		if ($start < $feature->start){$start = $feature->start}
-		if ($strand && ($strand ne $feature->strand)){warn "transcript will cross strands - ignored!"; return 0}
+		if ($strand && ($strand ne $feature->strand)){
+			$self->DraftCanvas->Dialog(
+					-title => "cross-strand",
+					-text => "transcript will cross strands - ignored",
+					-default_button => "OK",
+					-buttons => ["OK"])->Show(-global);
+			if ($self->DropHighlighted){
+					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
+					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
+			}
+			return 0
+		}
+
 		else {$strand = $feature->strand} # get strand information from the current feature while we are at it			
 	}	
 
 	foreach my $feature(values %features){  # sanity check - have to be featues of a certain BioPerl implementing type
 		next unless $feature;
 		unless ($feature->isa("Bio::SeqFeature::Gene::ExonI") ||
-				$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
-				$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
-				$feature->isa("Bio::SeqFeature::Gene::UTR")
-			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again"; return}
+			$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
+			$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
+			$feature->isa("Bio::SeqFeature::Gene::UTR")){
+				$self->DraftCanvas->Dialog(
+					-title => "invalid types",
+					-text => "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again",
+					-default_button => "OK",
+					-buttons => ["OK"])->Show(-global);
+				if ($self->DropHighlighted){
+					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
+					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
+				}
+			return
+			}
 	}
 
 	if ($SCF->Feature->can('transcripts')){  # it has been dropped on a Gene-type widget, therefore we want to make a new transcript from it
@@ -1174,7 +1196,17 @@ sub _receiveDropOnWidget {
 
 		foreach my $feature(values %features){  # ensure they are all on the same strand.
 			next unless $feature;
-			if ($feature->strand ne $Trans->strand){warn "transcript will cross strands - ignored!"; return 0}
+			if ($feature->strand ne $Trans->strand){
+				$self->DraftCanvas->Dialog(
+					-title => "cross-strand",
+					-text => "transcript will cross strands - ignored",
+					-default_button => "OK",
+					-buttons => ["OK"])->Show(-global);
+				if ($self->DropHighlighted){
+					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
+					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
+				}
+				return 0}
 		}	
 		
 		foreach my $feature(values %features){
@@ -1204,7 +1236,18 @@ sub _receiveDropCreateNewGene {
 		unless ($feature->end < $stop){$stop = $feature->end}
 		unless ($start){$start = $feature->start}
 		if ($start < $feature->start){$start = $feature->start}
-		if ($strand && ($strand ne $feature->strand)){warn "transcript will cross strands - ignored!"; return 0}
+		if ($strand && ($strand ne $feature->strand)){
+			$self->DraftCanvas->Dialog(
+					-title => "cross-strand",
+					-text => "transcript will cross strands - ignored",
+					-default_button => "OK",
+					-buttons => ["OK"])->Show(-global);
+			if ($self->DropHighlighted){
+					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
+					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
+			}
+			return 0
+		}
 		else {$strand = $feature->strand}			
 	}	
 	foreach my $feature(values %features){  # sanity check - have to be featues of a certain type
@@ -1212,8 +1255,18 @@ sub _receiveDropCreateNewGene {
 		unless ($feature->isa($self->BioPerlFeatureTypes->{Exon}) ||
 			$feature->isa($self->BioPerlFeatureTypes->{Poly_A_site}) ||
 			$feature->isa($self->BioPerlFeatureTypes->{Promoter}) ||
-			$feature->isa($self->BioPerlFeatureTypes->{UTR})
-		       ){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast features and drop again"; return}
+			$feature->isa($self->BioPerlFeatureTypes->{UTR})){
+				$self->DraftCanvas->Dialog(
+					-title => "invalid types",
+					-text => "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again",
+					-default_button => "OK",
+					-buttons => ["OK"])->Show(-global);
+				if ($self->DropHighlighted){
+					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
+					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
+				}
+			return
+		}
 	}
 
 	my $Gene = $self->BioPerlFeatureTypes->{Gene}->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");  	
@@ -1913,9 +1966,13 @@ sub _selectFeature {
     my ($self, $canvas, $map, $SorM) = @_;
 
     # quickly nab the position that was clicked so that we can zoom around this
-    my $current_loc = ($self->{-orientation} eq "horizontal") ?
-	($canvas->canvasx($canvas->XEvent->x)) : ($canvas->canvasy($canvas->XEvent->y));  #/)
-    $self->current_loc($current_loc);				
+	my $current_loc;	
+	if ($canvas->XEvent){    
+		$current_loc = ($self->{-orientation} eq "horizontal") ?
+		($canvas->canvasx($canvas->XEvent->x)) : ($canvas->canvasy($canvas->XEvent->y));
+	} else {$current_loc = 1}
+	
+	$self->current_loc($current_loc);				
     # this becomes the location on the map around which we will zoom if the user choses
 
     my @tags = $canvas->gettags('current'); # get the other tags for the currently selected widget
