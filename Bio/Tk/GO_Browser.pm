@@ -8,7 +8,8 @@ Bio::Tk::GO_Browser.pm - Simplistic browser for GO ontology terms
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
 Plant Biotechnology Institute, National Research Council of Canada.
-Copyright (c) National Research Council of Canada, October, 2000.
+Version 1: Copyright (c) National Research Council of Canada, October, 2000.
+Version 2: Copyright (c) National Research Council of Canada, March, 2001.
 
 =head2 DISCLAIMER
 
@@ -37,19 +38,16 @@ consequential or incidental, arising from the use of the software.
     	
   # create new main window.
   my $mw = MainWindow->new(-title => "GO Ontology Browser");
-    		
-  # create new textbox with scrollbars
-  $Textbox = $mw->Scrolled("Text", -background => "black")->pack(-fill => "both", -expand => 1);
-    		
-  # alternate method to create new textbox, NOT RECOMMENDED!!
-  #$Textbox = $mw->Text(-background => "black")->pack; 			
-    		
+  my $frame = $mw->Frame()->pack(-fill => 'both', -expand => 1);  		
+
   # create new GO browser
-  $GO = GO_Browser->new($Textbox, TopWindow => $mw);
+  # NOTE that the browser is now created inside of a frame, instead of with a text widget
+  $GO = GO_Browser->new($frame, TopWindow => $mw);
     		
     			
   # set up binding of button-2 to retrieve information
-    $Textbox->bind("<Button-2>" => sub {	
+  # NOTE the difference in the binding call compared to version 1.0
+    $GO->GOText->bind("<Button-2>" => sub {	
        my $acc = $GO->GOAcc;
        my $term = $GO->Term;
        my $def = $GO->Definition;
@@ -62,9 +60,11 @@ consequential or incidental, arising from the use of the software.
 
 =head2 DESCRIPTION and ACKNOWLEDGEMENTS
 
-Fills a Tk::Text widget with a browsable display of the GO ontology (http://www.geneontology.org/).
+Fills a Tk::Frame widget with a browsable display of the GO ontology (http://www.geneontology.org/).
 Items in red are "branches", while items in green are "leaves" of the GO ontology tree.
-Double-clicking branches moves you up and down the tree.  Middle-clicking on any element records the
+* Single-Clicking displays the definition of a term.
+* Double-clicking branches moves you up and down the tree.
+* Middle-clicking on any element records the
 clicked-upon term and definition (if available) and this event can be trapped by the top-level windowing
 system to retrieve this info for whatever external application you are building.
 
@@ -83,7 +83,7 @@ Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
 =head2 Options
 
  $GO = GO_Browser->new(
-   $Textbox,          	# the Tk Text widget
+   $Frame,          	# the Tk Frame widget
    TopWindow => $mw,   # the top-level window (or undef)
    GO_IP => "headcase.lbl.gov",  # the IP address of your GO database
    GO_dbName => "go"   # the name of the GO database
@@ -106,11 +106,8 @@ use Tk::Text;
 use Carp;
 use DBI;
 
-require XML::Simple;
-#use Tk::widgets qw(Balloon);
-use Storable;
 use vars qw($AUTOLOAD);
-Tk::Widget->Construct('GO_Browser');
+
 
 {
 	#Encapsulated class data
@@ -119,7 +116,9 @@ Tk::Widget->Construct('GO_Browser');
 	#ATTRIBUTES
     my %_attr_data = #     				DEFAULT    	ACCESSIBILITY
                   (	GOText 			=> [undef,			'read/write'],   # the text box
-                    path_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record $key's leading to our current position
+                    QueryText		=> [undef, 			'read/write'],   # the query box
+                    DefText			=> [undef, 			'read/write'],   # the definition of the term
+                    query_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record $key's leading to our current position
                     ObjectType		=> [undef, 			'read/write'],	 # this can be called from a Tk::Text widget, or a Tk::Scrolled("Text") widget, which affects the binding calls in showKeys
                   	Term			=> [undef, 			'read/write'],	 # the GO Ontology term just middle-clicked upon
                   	Definition		=> [undef, 			'read/write'],	 # the definition of the term just middle-clicked upon
@@ -128,9 +127,9 @@ Tk::Widget->Construct('GO_Browser');
                   	dbh				=> [undef, 			'read/write'],
                   	GO_IP			=> ['headcase.lbl.gov', 'read/write'],
                   	GO_dbName		=> ['go',			'read/write'],
-                  	child_query		=> [undef, 			'read/write'],   # compiled query for "are there children of this term" - used for coloring branches versus leaves
-                  	level_query		=> [undef, 			'read/write'],   # compiled query for "what are the children of this term" - used to get teh children of a branch
-                  	def_query		=> [undef, 			'read/write'],   # compiled query for "what is the definition of this term"
+                  	tree_query		=> [undef, 			'read/write'],   # compiled query to step down a branch to next node
+                  	root_query		=> [undef, 			'read/write'],   # compiled query to go to root
+                  	keyword_query	=> [undef, 			'read/write'],   # compiled query to search for a keyword
                   	
                   );
 
@@ -197,16 +196,17 @@ sub dbAccess {
 
 
 sub new{
-	my ($caller, $text, %args) = @_;
+	my ($caller, $frame, %args) = @_;
 	my ($GO);
-	return -2 if ((ref($text) ne "Tk::Text") && (ref($text) ne "Tk::Frame"));
+	return -2 if ((ref($frame) ne "Tk::Frame"));
 	
 	my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
-    my $self = $text;
-
+    my $self = $frame;
     $self = bless {}, $class;
 
+
+    # initialize object
     foreach my $attrname ( $self->_standard_keys ) {
     	if (exists $args{$attrname}) {
 		$self->{$attrname} = $args{$attrname} }
@@ -215,90 +215,99 @@ sub new{
     else {
 		$self->{$attrname} = $self->_default_for($attrname) }
     }
+    #  OBJECT INITIALIZED
 
+    # now fill it
+    my $QueryFrame = $frame->Frame()->pack(-side => 'top', -fill => 'x');
+    my $GOFrame = $frame->Frame()->pack(-side => 'top', -fill => 'both', -expand => 1);
+    my $DefFrame = $frame->Frame()->pack(-side => 'top', -fill => 'both', -expand => 1);
+
+    $QueryFrame->Label(-text => "Query Keywords", -background => 'white', -foreground => 'black')->pack(-side => 'left', -fill => 'x', -expand => 1);
+	$self->QueryText($QueryFrame->Text(-background => 'blue', -foreground => 'white', -height => 1)->pack(-side => 'left', -fill => 'x', -expand => 1));
+    $QueryFrame->Button(-text => "Search", -command => sub {$self->query_keywords})->pack(-side => 'right');
+    $self->GOText($GOFrame->Scrolled("Text", -background => "black")->pack(-fill => "both", -expand => 1));
+    $self->DefText($DefFrame->Scrolled("Text", -background => 'blue', -foreground => 'white',-height => 3, -wrap => 'word')->pack(-fill => 'both', -expand => 1));
+
+
+    # retrieve the GO database handle
     my $dbh = $self->dbAccess;
     $self->dbh($dbh);
 
-
-    $self->GOText($text);  # set an internal reference to the text-box which will hold the browser.
-    $self ->ObjectType(((ref($text) eq "Tk::Text")?"Text":"Scrolled")); # set object type to Text or Scrolled widget (Scrolled is actually a Tk::Frame object)
+    # the line below *should* be deprecated now... but i am not entirely certain...
+    # object tuype should always be Scrolled as far as I understand.  This
+    # is only important w.r.t. the tweaking of bindings at the end of of sub showKeys{}
+    $self ->ObjectType(((ref($self->GOText) eq "Tk::Text")?"Text":"Scrolled")); # set object type to Text or Scrolled widget (Scrolled is actually a Tk::Frame object)
 	
-	$self->level_query($self->dbh->prepare("select
-											definition,
-											child.acc,
-											child.name,
-											count(term2.term1_id)
-											from term as parent,
-											term as child,
-											term2term as relation
-											left join
-												term_definition as def
-												on def.term_id= child.id
-												left join
-													term2term as term2
-													on child.id=term2.term1_id
-													where
-													parent.acc = ? and
-													parent.id = relation.term1_id and
-													child.id = relation.term2_id
-													group by child.acc"));	
-	$self->showKeys("GO Ontology", $self->query_root);       # show the keys at root level
+
+	$self->_set_queries;  # this creates and compiles all queries
+												
+	$self->showKeys("GO Ontology", $self->query_root);  # show the keys at root level
 
     return $self;                     # return handle to self
 }
 
-sub query_root {  # query the root level
+sub query_root {  # query the root level.  This is just a quick way to get back to root using it's own SQL statement
 	my ($self) = @_;
-	
-	my $start_qu = $self->dbh->prepare("select
-										definition,
-										parent.acc,
-										child.acc,
-										child.name,
-										count(term2.term1_id)
-										from term as parent,
-										term as child,
-										term2term as relation
-											left join
-											term_definition as def
-											on
-											def.term_id = child.id
-												left join
-												term2term as term2
-												on child.id=term2.term1_id
-												where
-												parent.type = 'root' and
-												parent.id = relation.term1_id and
-												child.id = relation.term2_id
-												group by child.acc
-											");
-	$start_qu->execute;
-	my %GO_hash;
-	my ($def, $parent, $acc, $term, $children, $root_acc);
-	while (($def, $parent, $acc, $term, $children) = $start_qu->fetchrow_array){
-		$root_acc = $parent;
-		$GO_hash{$acc} = [$term, $def, $children];    # hard coded that they have children
-	}
-	return ($root_acc, \%GO_hash);
-}
+	my $variable = 'root';
 
-
-sub query_level {
-	my ($self, $parent_acc) = @_;
-	
-	$self->level_query->execute($parent_acc);
+	$self->root_query->execute($variable);  # a single variable, 'root' is effectively hard coded here
 	my %GO_hash;
-	while (my ($def, $acc, $term, $children) = $self->level_query->fetchrow_array){
+	my ($def, $acc, $term, $children, $root_acc);
+	while (($def, $acc, $term, $children) = $self->root_query->fetchrow_array){
 		$GO_hash{$acc} = [$term, $def, $children];
 	}
-	return ($parent_acc, \%GO_hash);
+	
+	return ($self->root_query, [$variable],\%GO_hash);
 }
 
+
+sub do_query {   # gets the query statement handle and the variable,
+					# executes an arbitrary query, and then returns the result
+	my ($self, $sth, $variables) = @_;
+	my (@variables) = @{$variables};  # b.t.w. the first variable is *usually* the GO-term acc
+	$sth->execute(@variables);        # execute the query sent
+	my %GO_hash;
+	while (my ($def, $acc, $term, $children) = $sth->fetchrow_array){ # fetch the def, accession number, GO term, and number of children of each node
+		$GO_hash{$acc} = [$term, $def, $children];                    # make a hash of them
+	}
+	return ($sth, $variables, \%GO_hash);                             # return the hash, along with the variables that were used to create it
+}                                                                     # these will be pushed onto a stack (or have been pulled off of a stack)
+
+sub query_keywords {
+	# this is called by typing search terms into the search box and clicking "search"
+	# it queries the GO_term text, synonym text, and definition text
+	# all matches are shown in the box
+	# multiple keywords are combined with "OR" at the moment.
+	
+	my ($self) = @_;
+	my $keywords = $self->QueryText->get('1.0', 'end'); # get the keywords
+	chomp $keywords;                                    # get rid of \n
+	$keywords =~ s/,/ /g;                               # get rid of commas (if any)
+	my @keywords = split /\s+/, $keywords;              # split on space into individual keywords
+	my @GO_hash; my $query_keys;
+	foreach my $key(@keywords){                         # for each keyword do the query
+		$query_keys .= "$key ";
+		$key = "% ".$key." %";                          # wil become a LIKE '% .. %' term in the SQL statement
+		my ($sth, $vars, $Hash) = $self->do_query($self->keyword_query, [$key, $key, $key]); # SQL statement requires three variables for term, synonym, and def
+		push @GO_hash, %{$Hash};                        # result is added to the hash (hence the keywords are joined by 'OR')
+	}
+	#print "\ndone\n";
+	#unshift @{$self->{query_stack}}, ["QUERY $query_keys", [$self->keyword_query, \@keywords]];  # this query must be added to the stack
+	undef $self->{query_stack};  # empty the stack so that reversing is no longer possible
+	$self->showKeys ("QUERY $query_keys", $self->keyword_query, \@keywords,\@GO_hash);  # now show the result
+
+}
 sub showKeys {
-	my ($self, $parentterm, $parent_acc, $GO_hashref) = @_;    # hash is {acc}={term} where acc is eg. "8150", which is effectively "O:0008150" in the XML docs
-	
-	my %GO_hash = %{$GO_hashref};    # get the hash of things to display
-	
+	my ($self, $current_term, $current_sth, $variables, $GO_hashref) = @_;    # hash is {acc}={term} where acc is eg. "8150", which is effectively "O:0008150" in the XML docs
+	my %GO_hash;
+	if (ref($GO_hashref) =~ "HASH"){
+		 %GO_hash = %{$GO_hashref};    # get the hash of things to display
+	} else {
+		 %GO_hash = @{$GO_hashref};    # get the hash of things to display
+    }
+
+	$self->DefText->delete('1.0', 'end');  # clear the contents of the definition box
+							
 	my $Text = $self->GOText;       # get the text-box reference
 	$Text->configure(-state => "normal");  # empty it and make it writable
 	$Text->delete("1.0", "end");
@@ -306,26 +315,25 @@ sub showKeys {
 	$Text->insert("end", "/                         \n", ["root"]);     # make the '/' root level symbol
    	$Text->tagConfigure("root", -foreground => "yellow");  				# TO GO TO ROOT
    	$Text->tagBind("root", "<Double-Button-1>",                         # bind the double-click
-   			sub {undef $self->{path_stack};                             # delete everything from the stack
+   			sub {undef $self->{query_stack};                             # delete everything from the stack
    				$self->showKeys("GO Ontology", $self->query_root);      # refresh the browser with the root contents
    				$self->TopWindow->configure(-title => "GO Ontology");   # configure the title
    				$self->TopWindow->update;
    			});
 	
-	unless ($#{$self->{path_stack}} < 0){                                   # IF THERE IS NO TREE TO MOVE UP THEN DONT DO THIS
+	unless ($#{$self->{query_stack}} < 0){                                   # IF THERE IS NO TREE TO MOVE UP THEN DONT DO THIS
 		$Text->insert("end", "../                        \n", ["parent"]);	# TO MOVE UP THE TREE
 		$Text->tagConfigure("parent", -foreground => "yellow");
       	$Text->tagBind("parent", "<Double-Button-1>",
-      			sub {my $grandterm = shift @{$self->{path_stack}};   	# take off of the stack the verbose TERM of the parent,
-      				 my $grandparent = shift @{$self->{path_stack}};    # take off of the stack the Acession number of the parent,
+      			sub {my ($grandparent_term, $query_ref) = @{shift @{$self->{query_stack}}};   	# take off of the stack the verbose TERM of the grandparent, and the query parameters
+      				 my ($grandparent_sth, $variables) = @{$query_ref};    # take the query object and associated variables our of the queryref
       				
-      				$self->showKeys($grandterm, $self->query_level($grandparent));  # then call this routine with the parents address
-      				$self->TopWindow->configure(-title => $grandterm);
+      				$self->showKeys($grandparent_term, $self->do_query($grandparent_sth, $variables));  # then call this routine with the parents query and variables
+      				$self->TopWindow->configure(-title => $grandparent_term);
       				$self->TopWindow->update;
       				}
       			);
    	}
-   	
    	
 	foreach my $acc(keys %GO_hash){					# ask for the sub-level keys--> there are always two:  term and definition
 			
@@ -334,15 +342,23 @@ sub showKeys {
 			$Text->insert('end', $term, [$acc]);           # print it,and tag it with its key GO:nnnnnn
 			
 			$def = "No Definition Available" if (!$def);
+  			
+			# bind the single-click to writing the definition into the DefText box
+  			$Text->tagBind($acc, "<Button-1>",
+  					sub {$self->DefText->delete('1.0', 'end');
+  						$self->DefText->insert('end', $def);
+  						$self->DefText->update;
+  						}
+  					);
 			
 			if ($children > 0){	                                 # if this term has children then it is not a leaf
 				$Text->tagConfigure($acc, -foreground => "red"); # if it is not a leaf, then make it red
 				$Text->tagBind($acc, "<Double-Button-1>",
-						sub {                                   # if it is double-clicked, then
-							unshift @{$self->{path_stack}}, $parent_acc;  # stick this parent accession number onto the stack for backing up purposes
-							unshift @{$self->{path_stack}}, $parentterm;  # stick this parent TERM onto the stack
+						sub {unshift @{$self->{query_stack}}, [$current_term, [$current_sth, $variables]];  # stack this term, the query, and the varibles for that query
 							chomp $term;                                  # remove the newline character we added
-							$self->showKeys($term, $self->query_level($acc));  	# then call the routine using this child as the next root
+							my $this_query_type = $self->tree_query;	   # make it clear what we are using
+							
+							$self->showKeys($term, $self->do_query($this_query_type, [$acc]));# then execute the standard tree query using this child's acc
 						 	$self->TopWindow->configure(-title => $term);$self->TopWindow->update;
 						 }
 						);
@@ -360,15 +376,18 @@ sub showKeys {
 			
 			
 			if ($self->ObjectType eq "Scrolled"){     # use this if called as a Scrolled text widget
+				my @framebindings = $Text->bindtags;
+				unshift @framebindings, ('parent', 'root');
+				$Text->bindtags(\@framebindings);
 				my @bindings = $Text->Subwidget("text")->bindtags();
 				shift @bindings;  # get rid of the Tk::Text binding itself to prevent highlighting of the sequence
-				unshift @bindings, $acc;
-				
+				unshift @bindings, 'parent';
+				unshift @bindings, 'root';
 				$Text->Subwidget("text")->bindtags(\@bindings);
 			} else {									# use this if called as a normal text widget
+				#print "\nwrong widget type created - this is an ugly error!\n";
 				$Text->bindtags(['all',
 								'.',
-								$acc,
 								'parent',               # changed the order of binding
 								'root', '.text',]); 	# because the text-box itself will respond to
 			}                                           # double-clicks by highlighting the entire text!
@@ -378,7 +397,78 @@ sub showKeys {
 	} # end of foreach my $acc
 }
 
-
+sub _set_queries {
+	my ($self) = @_;
+	$self->tree_query($self->dbh->prepare("select
+											definition,
+											child.acc,
+											child.name,
+											count(term2.term1_id)
+											from term as parent,
+											term as child,
+											term2term as relation
+											left join
+												term_definition as def
+												on def.term_id= child.id
+												left join
+													term2term as term2
+													on child.id=term2.term1_id
+													where
+													parent.acc = ? and
+													parent.id = relation.term1_id and
+													child.id = relation.term2_id
+													group by child.acc"));
+													
+													
+	$self->root_query($self->dbh->prepare("select
+										definition,
+										child.acc,
+										child.name,
+										count(term2.term1_id)
+										from term as parent,
+										term as child,
+										term2term as relation
+											left join
+											term_definition as def
+											on
+											def.term_id = child.id
+												left join
+												term2term as term2
+												on child.id=term2.term1_id
+												where
+												parent.type = ? and
+												parent.id = relation.term1_id and
+												child.id = relation.term2_id
+												group by child.acc
+											"));
+											
+											
+	$self->keyword_query($self->dbh->prepare("select
+											definition,
+											child.acc,
+											child.name,
+											count(term2.term1_id)
+											from term as parent,
+											term as child,
+											term2term as relation
+												left join
+													term_synonym as syn
+													on syn.term_id = child.id
+												left join
+													term_definition as def
+													on def.term_id = child.id
+												left join
+													term2term as term2
+													on child.id = term2.term1_id
+													WHERE
+													(def.definition Like ? OR
+													syn.synonym Like ? OR
+													child.name Like ?) AND
+													parent.id = relation.term1_id and
+													child.id = relation.term2_id
+													group by child.acc"));
+												
+}
 
 1;
 
