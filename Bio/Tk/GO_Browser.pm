@@ -5,7 +5,7 @@ Bio::Tk::GO_Browser.pm - Browser of the GO ontology
 =head1 SYNOPSIS
 
  use Tk;
- use Bio::Tk::GO_Browser_tree;  # in bioperl-gui from BioPerl
+ use Bio::Tk::GO_Browser  # in bioperl-gui from BioPerl
  require GO::AppHandle;  # you must have the GO perl_api from BDGP
                          # contact Chris Mungall for details
                          # (cjm@fruitfly.bdgp.berkeley.edu)
@@ -16,7 +16,7 @@ Bio::Tk::GO_Browser.pm - Browser of the GO ontology
  sub begin {
    my $mw = MainWindow->new; 
    my $frame = $mw->Frame->pack;
-   my $GO = GO_Browser_tree->new($frame);
+   my $GO = GO_Browser->new($frame);
  
    my $Annotation;
 
@@ -407,9 +407,9 @@ sub new {
 					-height => $self->height,
 					-width => $self->width,
 					-background => $self->background,
-					-browsecmd => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->browsed($path);$self->events->eventGenerate("<<Button-1>>");$self->frame->Unbusy}, 
+					-browsecmd => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->browsed($path);$self->frame->Unbusy;$self->events->eventGenerate("<<Button-1>>", -when => 'tail')}, 
 					-opencmd  => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->clickedOpen($path);$self->frame->Unbusy},			
-					-command => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->selectEntry($path);$self->events->eventGenerate("<<Double-Button-1>>");$self->frame->Unbusy},
+					-command => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->selectEntry($path);$self->frame->Unbusy;$self->events->eventGenerate("<<Double-Button-1>>", -when => 'tail')},
 					));
 
 	$self->browser->bind("<Button-3>" => sub {	my $widget = shift;
@@ -417,7 +417,7 @@ sub new {
 												my $y=$widget->XEvent->y;
 												my $path = $self->browser->nearest($y);
 												$self->browsed($path);
-												$self->events->eventGenerate("<Button-3>");
+												$self->events->eventGenerate("<Button-3>", -when => 'tail');
 											});
 	
 	$self->browser->bind("<Button-2>" => sub {	my $widget = shift;
@@ -425,7 +425,7 @@ sub new {
 												my $y=$widget->XEvent->y;
 												my $path = $self->browser->nearest($y);
 												$self->browsed($path);
-												$self->events->eventGenerate("<Button-2>");
+												$self->events->eventGenerate("<Button-2>", -when => 'tail');
 											});
 
 	
