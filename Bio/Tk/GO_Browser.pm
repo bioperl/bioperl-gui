@@ -178,6 +178,8 @@ Other methods of GO_Browser are listed below...
       TopWindow   => $top,	# optional - MainWindow object
       dbname      => $db, 	# optional - database name (default "go")
       host        => $host,	# optional - default determined at run time
+      dbuser      => $user, # optional - database username
+      dbauth      => $pass, # optional - database password
       leaf_color  => $color	# optional - default "darkgreen"
       branch_color=> $color	# optional - default "red"
       background  => $color	# optional - default "white"
@@ -243,6 +245,8 @@ use vars qw(@ISA @EXPORT); #keep 'use strict' happy
                   (	TopWindow		=>	[undef, 	'read/write'],
 					dbname 			=>	["go", 		'read/write'],
 					host 			=>	[undef, 'read/write'],
+					dbuser			=>  [undef, 'read/write'],
+					dbauth			=>  [undef, 'read/write'],
 					leaf_color		=>	["darkgreen", 	'read/write'],
 					branch_color	=>	["red",		'read/write'],
 					background		=>	["white", 	'read/write'],
@@ -355,8 +359,10 @@ sub new {
 
         if ($res->is_success) {
             my $resp =  $res->content;
-			my $host = ($resp =~ /\w+\s+(.*)/ && $1);
-			$self->host($host);
+			unless ($self->host){
+				my $host = ($resp =~ /\w+\s+(.*)/ && $1);
+				$self->host($host)
+			}
 		}
 		unless ($self->host){
 			warn "unable to determine host name from BDGP website\n";
@@ -364,7 +370,14 @@ sub new {
 		}       
 	}
 	
-	unless ($self->GO_API){$self->GO_API(GO::AppHandle->connect(-dbname => $self->dbname, -dbhost => $self->host))};
+	my %connect_hash;
+	if ($self->dbname){$connect_hash{-dbname}=$self->dbname}
+	if ($self->host){$connect_hash{-dbhost}=$self->host}
+	if ($self->dbuser){$connect_hash{-dbuser}=$self->dbuser}
+	if ($self->dbauth){$connect_hash{-dbname}=$self->dbauth}
+	
+	
+	unless ($self->GO_API){$self->GO_API(GO::AppHandle->connect(%connect_hash))};
 	unless ($self->GO_API){
 		warn "unable to connect to the GO database at " . ($self->host) . "\n";
 		return 0;
