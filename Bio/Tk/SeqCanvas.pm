@@ -946,12 +946,12 @@ sub _drawTopLevelFeatures {
 	next if (!($feature->primary_tag eq "gene")); # if it aint a gene, don't map it
 	push @genes, $feature;	# if it is, then stick it in a list and...
 
-	foreach my $subfeature($feature->sub_SeqFeature) { # get a list of all of its sub-features
-	    push @subfeatures, $subfeature; # stick them into a list too
-	}
+	my @subFeatureList=_recurse_subFeatures($feature);  # get a list of all of its sub-features
+	push @subfeatures, @subFeatureList;                 # stick them into a list too
     }
+
     push @FinishedFeatures, @genes;
-    push @FinishedFeatures, @subfeatures; # stick the lists together and...		
+    push @FinishedFeatures, @subfeatures; # stick the lists together and...
     mapFeatures($self,		# MAP THEM!
 		'finished',	# which canvas to draw on
 		\@FinishedFeatures, # the list of top-level genes and sub-features
@@ -967,11 +967,13 @@ sub _drawSubFeatures {
     my $TOP = $self->SysMess;
     if ($TOP){$TOP->configure(-text => "Drawing Sub features"); $TOP->update}
     my @DraftFeatures;
-    my @features = $self->MapSeq->all_SeqFeatures;
+    my @features = $self->MapSeq->top_SeqFeatures;
     foreach my $feature(@features){
     	next if ($feature->primary_tag eq "gene");
-    	push @DraftFeatures, $feature;
-    }	
+	my @subFeatureList=_recurse_subFeatures($feature);
+    	push @DraftFeatures, @subFeatureList;
+	push @DraftFeatures, $feature;
+    }
     mapFeatures($self,
 		'draft',
 		\@DraftFeatures, # the sub-features associated with that object
@@ -983,6 +985,13 @@ sub _drawSubFeatures {
 		);
 }
 
+sub _recurse_subFeatures {
+    my $feature=shift;
+    return unless $feature;
+    return (_recurse_subFeatures($feature->sub_SeqFeatures),  #recursively search through sub_SeqFeatures
+	    $feature->sub_SeqFeature                          #add this level list of sub_SeqFeatures
+	   );
+}
 
 sub _extract_sources {
     my (@features) = @_;
@@ -1548,7 +1557,7 @@ sub getFeaturesWithTag {
  	my (%FeatureHash, @selected);
 	if ($#whichtags == -1){return \%FeatureHash};   # returns an empty hash if there were no parameters sent
 	
-	foreach my $whichtag(@whichtags){	
+	foreach my $whichtag(@whichtags){
     	my $Dcanvas = $self->DraftCanvas;
     	my $Fcanvas = $self->FinishedCanvas;
         @selected = $Dcanvas->find("withtag", $whichtag);       # find all DRAFT Widget ID's that have a "selected" tag
@@ -1559,7 +1568,7 @@ sub getFeaturesWithTag {
         	next if (!$FeatureID);
         	my $FeatureIndex = $1;
         	my $feature = $self->IndexedFeatureList->[$FeatureIndex];   # extract this Bio::Feature object from the indexed list
-        	$FeatureHash{"$FeatureID"} = $feature;                 # stick it in the hash to be returned to the user
+        	$FeatureHash{$FeatureID} = $feature;                 # stick it in the hash to be returned to the user
          }
         @selected = $Fcanvas->find("withtag", $whichtag);      # find all FINISHED Widget ID's that have a "selected" tag
         foreach my $widget(@selected){
