@@ -294,7 +294,7 @@ $Bio::Tk::SeqCanvas::VERSION='2.0';
                     MapSeq				=>	[undef,			'read/write'],
                     MapFrame			=>	[undef,			'read/write'],
                     SeqFrame			=>  [undef, 		'read/write'],  # the frame to hold the sequence display
-                    SeqText				=>  [undef, 		'read/write'],  # the sequence display text box
+                    #SeqText				=>  [undef, 		'read/write'],  # the sequence display text box
                     ZoomFrame			=>	[undef,			'read/write'],
                     ScrollFrame 		=>  [undef, 		'read/write'],
                     DraftCanvas			=>	[undef,			'read/write'],
@@ -614,9 +614,10 @@ sub new {
     my $map_width = ($self->width);	#/
 
     if ($self->{-orientation} eq "horizontal") {
-       	$self->SeqText($self->SeqFrame->Scrolled("Text", -scrollbars => "s", -height => 3, -background => 'black', -foreground => "white", -wrap => 'none')->pack(-expand => 1, -fill => 'both')); # text box for teh sequence
-       	$self->SeqText->insert('end', "\n");
-       	$self->SeqText->insert('end', $SeqObj->seq);
+       	# the SeqText widget breaks MS-Windows, and is of questionable value anyway...
+       	#$self->SeqText($self->SeqFrame->Scrolled("Text", -scrollbars => "s", -height => 3, -background => 'black', -foreground => "white", -wrap => 'none')->pack(-expand => 1, -fill => 'both')); # text box for teh sequence
+       	#$self->SeqText->insert('end', "\n");
+       	#$self->SeqText->insert('end', $SeqObj->seq);
        	
        	$self->dya(-$map_width/2); # each map is equally distributed
        	$self->fya(-$map_width/2); # each map is equally distributed
@@ -1505,12 +1506,13 @@ sub _selectFeature {
     }
     my $color = $self->current_colors->{$source};
 
-    if ($self->{-orientation} eq "horizontal"){
-    	if ($SorM eq "single"){$self->SeqText->tagDelete("currently_selected", "currently_selected")}   # remove existing tags
-    	$self->SeqText->tagAdd("currently_selected", $index1, $index2); # add the tag to the new region
-    	$self->SeqText->tagConfigure("currently_selected", -foreground => $color);  # recolor it to the correct color
-    	$self->SeqText->see($index1);  # bring it into view
-    }
+    # removed to accomodate MS Windows OS's
+    #if ($self->{-orientation} eq "horizontal"){
+    #	if ($SorM eq "single"){$self->SeqText->tagDelete("currently_selected", "currently_selected")}   # remove existing tags
+    #	$self->SeqText->tagAdd("currently_selected", $index1, $index2); # add the tag to the new region
+    #	$self->SeqText->tagConfigure("currently_selected", -foreground => $color);  # recolor it to the correct color
+    #	$self->SeqText->see($index1);  # bring it into view
+    #}
     	
 }
 
