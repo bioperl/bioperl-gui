@@ -575,7 +575,7 @@ sub new {
 
     my $toplevel = $self->DraftCanvas->toplevel;
     my $a = $toplevel->geometry;
-	print "\n\n$a\n\n";                                                                             # w   h   x  y
+	#print "\n\n$a\n\n";                                                                             # w   h   x  y
 	$a =~ /(\d+)x(\d+)\+-?(\d+)\+-?(\d+)/;      #get current screen position of top-level window eg. 500x300+20+-45
 	$toplevel->geometry("$1"."x"."$2+10+10");  # set it so that the control bar is entirely visible at the top of the screen
 
