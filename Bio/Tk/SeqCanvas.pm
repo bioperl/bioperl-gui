@@ -402,7 +402,7 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     BioPerlFeatureTypes	=>  [{"Exon" 		=> "Bio::SeqFeature::Gene::Exon",
 											  "Intron"		=> "Bio::SeqFeature::Gene::Intron",
 											  "Promoter"	=> "Bio::SeqFeature::Gene::Promoter",
-											  "PolyA"		=> "Bio::SeqFeature::Gene::Poly_A_site",
+											  "Poly_A_site"	=> "Bio::SeqFeature::Gene::Poly_A_site",
 											  "UTR"			=> "Bio::SeqFeature::Gene::UTR",
 											  "Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
 											 },					'read/write'],
@@ -1134,11 +1134,11 @@ sub _receiveDropOnWidget {
 
 	foreach my $feature(values %features){  # sanity check - have to be featues of a certain type
 		next unless $feature;
-		unless ($feature->isa("Bio::SeqFeature::Gene::Exon") ||
-				$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
-				$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
-				$feature->isa("Bio::SeqFeature::Gene::UTR")
-			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast features and drop again"; return}
+		unless ($feature->isa($self->BioPerlFeatureTypes->{Exon}) ||
+				$feature->isa($self->BioPerlFeatureTypes->{Poly_A_site}) ||
+				$feature->isa($self->BioPerlFeatureTypes->{Promoter}) ||
+				$feature->isa($self->BioPerlFeatureTypes->{UTR})
+			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again"; return}
 	}
 
 	if ($SCF->Feature->can('transcripts')){  # it has been dropped on a Gene-type widget, therefore we want to make a new transcript from it
