@@ -360,7 +360,7 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
 		dkgreen => '#00aa00',
 		ltgreen => '#aaeeaa',
 	 );
-	 my @colorlist = qw(darkblue magenta dkgreen fuschia orange purple chartreuse lightblue yellowgreen turquoise green yellow brown ltgreen);
+	 my @colorlist = qw(darkblue yellowgreen fuschia orange purple dkgreen chartreuse lightblue magenta turquoise green yellow brown ltgreen);
 	
 	my $dxa;
 	my $dya;
@@ -1226,12 +1226,12 @@ sub _receiveDropOnWidget {
 
 	foreach my $feature(values %features){  # sanity check - have to be featues of a certain BioPerl implementing type
 		next unless $feature;
-		unless ($feature->isa("Bio::SeqFeature::Gene::ExonI") ||
-			$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
-			$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
-			$feature->isa("Bio::SeqFeature::Gene::UTR")){
+		unless ($feature->isa($self->BioPerlFeatureTypes->{Exon}) ||
+			$feature->isa($self->BioPerlFeatureTypes->{Poly_A_site}) ||
+			$feature->isa($self->BioPerlFeatureTypes->{Promoter}) ||
+			$feature->isa($self->BioPerlFeatureTypes->{UTR})){
 				$self->DraftCanvas->Dialog(
-					-title => "invalid types",
+					-title => "Invalid Feature Type ".(ref $feature)."",
 					-text => "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again",
 					-default_button => "OK",
 					-buttons => ["OK"])->Show(-global);
@@ -1249,15 +1249,19 @@ sub _receiveDropOnWidget {
 		my $Trans; my $Gene;
 												# figure out what type of widget it is (this is better done with an ->isa cal I think...)
 		if ($SCF->Feature->can('exons')){ 		# is it a transcript?
+			print "dropping on transcript\n";
 			$Trans = $SCF->Feature;     		# this IS the transcript object
 			$Gene = $SCF->parent_gene;  		# get the SCF gene object
 		} elsif ($SCF->Feature->can('cds')){	# is it an exon?, if so we need to findthe transcript of which that exon is a part...
+            print "dropping on exon\n"; 			
 			$Trans = $SCF->parent_transcript;	# get the parent transcript
 			$Gene = $SCF->parent_gene;  		# get the SCF gene object
 		} else {warn "invalid drop-recipient object"; return 0}
-
+print "one\n";
 		foreach my $feature(values %features){  # ensure they are all on the same strand.
+print "two\n";			
 			next unless $feature;
+print "three\n";
 			if ($feature->strand ne $Trans->strand){
 				$self->DraftCanvas->Dialog(
 					-title => "cross-strand",
@@ -1268,11 +1272,20 @@ sub _receiveDropOnWidget {
 		}	
 		
 		foreach my $feature(values %features){
+print "four ".(ref $feature)."\n";
 			next unless $feature;
-			if ($feature->isa("Bio::SeqFeature::Gene::ExonI")){$Trans->add_exon($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
-			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
+			if ($feature->isa("Bio::SeqFeature::Gene::ExonI")){print "adding exon $feature ".(ref $feature)."\n";$Trans->add_exon($feature)}
+			elsif ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+			elsif ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+			elsif ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}
+            else {
+                $self->DraftCanvas->Dialog(
+					-title => "Invalid Feature Type ".(ref $feature)."",
+					-text => "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again",
+					-default_button => "OK",
+					-buttons => ["OK"])->Show(-global);
+                return
+			}
 		}
 			
 		$self->unmapFeatures([$Gene->FID]);

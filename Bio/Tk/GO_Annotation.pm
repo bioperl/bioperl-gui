@@ -342,5 +342,7 @@ sub gff2_attributes {
   Comments:  gets/sets the definition
 
 =cut
+
+sub DESTROY {}
 	
 1;

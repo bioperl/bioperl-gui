@@ -745,7 +745,5 @@ sub n_products {
 	return $TERM->n_products(@args);
 }
 
-
-
 			
 1;

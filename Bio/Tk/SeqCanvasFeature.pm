@@ -208,8 +208,10 @@ sub _drawThyselfOnFinished {
         $SCF_transcript->parent_gene($SCF_GENE);
         push @transcripts, $SCF_transcript;
 			
-	    foreach my $exon ($transcript->exons) {
-			
+	    #foreach my $exon ($transcript->exons) {
+		foreach my $exon ($transcript->sub_SeqFeature) {
+			#print "exon found $exon ref", ref $exon,"\n";
+			#next unless ($exon->isa("Bio::SeqFeature::Gene::ExonI"));			
 			my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
 									Feature => $exon, # this fills all of the FeatureI methods
 									canvas_name => 'finished',
