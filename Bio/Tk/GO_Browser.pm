@@ -137,7 +137,7 @@ use Tk::Text;
 use Carp;
 require XML::Simple;
 #use Tk::widgets qw(Balloon);
-use Data::Dumper;
+use Storable;
 use vars qw($AUTOLOAD);
 Tk::Widget->Construct('GO_Browser');
 
@@ -251,16 +251,11 @@ sub new{
 		$gofile = $GOpath . "GOcomponent.gob";	
 	}
     else {return -1}  # wb-parsed function does not exist yet
-		
-   	undef $/;  # undefine the input record separator
-   	open IN, $gofile or die "can't find input file";
-   	my $line = <IN>;   # slurps the entire file GO ontology file
-   	close IN;
-   	$/ = "\n";    # redefine input record separator to be friendly to other parts of the program :-)
-   	eval $line;   # $line has the form " $GO = { blah blah blah multi level hash } "		
+
+    $GO = retrieve($gofile);  # this is a thaw of the frozen data
 
     #  **************  store the parsed GO information in self->GO
-    $self->GO($GO); # $GO variable itself becomes defined in the eval statement above
+    $self->GO($GO);
     # ************************************************************
 
     (($ontology eq "process" && ($self->instance_root($self->process_root))) ||    # set this instance of GO:nnn "root" value to the
@@ -431,16 +426,9 @@ sub parseOntologyFile {
 
     #print "got to end\n";
     #print "dumping data\n";
-    my $d = Data::Dumper->new([$GO], ["GO"]);    # dump out the hash as a readable data structure
-    $d->Purity(1)->Terse(0)->Deepcopy(1);
-    my $dumped = $d->Dump;
 
     my $OUTfilename = "GO" . $type . ".gob";      # create a predictable filename
-
-    open OUT, ">$GoPath" . "$OUTfilename" or die "can't open dumped data file for output";
-    print OUT $dumped;
-    close OUT;
-	
+    store \%{$GO}, "$GoPath" . "$OUTfilename";    # store in binary format
 	return $GO
 }
 
