@@ -297,7 +297,7 @@ GeneMarkHMM" not just "GeneMarkHMM")
 
 =cut
 
- 	
+
 package Bio::Tk::SeqCanvas;
 use Bio::Tk::SeqCanvasFeature;
 use strict;
@@ -309,7 +309,7 @@ use Bio::Tk::AnnotMap;
 use Tk::widgets qw(ColorEditor);
 use Bio::SeqI;
 use Bio::SeqIO;
-use Bio::SeqFeature::Exon;
+#use Bio::SeqFeature::Gene::Exon; deprecated
 use Bio::SeqFeature::Gene::Exon;
 use Bio::SeqFeature::Gene::Transcript;
 use Bio::SeqFeature::Gene::GeneStructure;
@@ -865,13 +865,7 @@ sub _deleteFeatures {
 			push @Ffeatures, $FID;
 		}
 	}
-	#  method ends here as there is no delete_SeqFeature routine...
-	# complain to Ewan, who will respond that creating a new Seq object
-	# is more efficient than editing an existing one
-	#... but of course, he wasn't thinking about a GUI...
-	# As soon as such a method exists
-	# I will implement it here.
-	
+	#  method ends here as there is	
 }
 
 sub _setupDrag_n_Drop {
@@ -1024,22 +1018,25 @@ sub _bindDropEvent {
 }
 
 sub _receiveDropOnWidget {
-	my ($self, $widget) = @_; # the WidgetID is sent in here, not the FeatureID... so get the feature
+	my ($self, $widget) = @_; # the Canvas WidgetID is sent in here, not the FeatureID... so get the feature
 	my @tags = $self->FinishedCanvas->gettags($widget);
-	my ($FID) = _extractTags(\@tags);
-	my $SCF = $self->AllFeatures($FID);
+	my ($FID) = _extractTags(\@tags);  # FeatureID is contained in the tags, and can be parsed out
+	my $SCF = $self->AllFeatures($FID);  # then get this feature id from the list
+
+	my %features = %{$self->getSelectedFeatures};
+	my $start = 0; my $stop = 0; my $strand;  # get the dimensions of the new transcript
+	foreach my $feature(values %features){  # get boundary information and ensure they are all on the same strand.
+		next unless $feature;
+		unless ($feature->end < $stop){$stop = $feature->end}
+		unless ($start){$start = $feature->start}
+		if ($start < $feature->start){$start = $feature->start}
+		if ($strand && ($strand ne $feature->strand)){warn "transcript will cross strands - ignored!"; return 0}
+		else {$strand = $feature->strand} # get strand information from the current feature while we are at it			
+	}	
+
+
 	if ($SCF->Feature->can('transcripts')){  # it has been dropped on a Gene-type widget, therefore we want to make a new transcript from it
 		my $Gene = $SCF->Feature;
-		my %features = %{$self->getSelectedFeatures};
-		my $start = 0; my $stop = 0; my $strand;  # get the dimensions of the new transcript
-		foreach my $feature(values %features){
-			next unless $feature;
-			unless ($feature->end < $stop){$stop = $feature->end}
-			unless ($start){$start = $feature->start}
-			if ($start < $feature->start){$start = $feature->start}
-			if ($strand && ($strand ne $feature->strand)){warn "transcript will cross strands - ignored!"; return 0}
-			else {$strand = $feature->strand}			
-		}	
 		my $Trans = Bio::SeqFeature::Gene::Transcript->new(-start => $start, -end => $stop, -source => "SeqCanvas", -primary => "transcript", -strand => $strand);
 		
 		foreach my $feature(values %features){
@@ -1050,8 +1047,10 @@ sub _receiveDropOnWidget {
 				my @values = $feature->each_tag_value($tag);
 				$taghash{$tag} = $values[0];
 			}
-			my $exon = Bio::SeqFeature::Exon->new(-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%taghash);
-			
+			my $exon = Bio::SeqFeature::Gene::Exon->new();  # make an exon object
+			$exon->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
+
+				#-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%
 			$Trans->add_exon($exon)
 		}
 		
@@ -1061,31 +1060,28 @@ sub _receiveDropOnWidget {
 		$self->DropHighlighted(undef);
 		return $self->mapFeatures(undef, [$Gene]);
 	}
-	else{
+	else{  # in this case we have dropped on something other than a gene-type widget.  This will either be a transcript or a transcript part...
 		my $Trans; my $Gene;
-		if ($SCF->Feature->can('exons')){
-			$Trans = $SCF->Feature;     # this IS the transcript object
-			$Gene = $SCF->parent_gene;  # get the SCF gene object
-		} elsif ($SCF->Feature->can('cds')){  # this means that it is dropping on an exon, so we needto findthe transcript of which that exon is a part...
-			$Trans = $SCF->parent_transcript;     # get the parent transcript
-			$Gene = $SCF->parent_gene;  # get the SCF gene object
+												# figure out what type of widget it is (this is better done with an ->isa cal I think...)
+		if ($SCF->Feature->can('exons')){ 		# is it a transcript?
+			$Trans = $SCF->Feature;     		# this IS the transcript object
+			$Gene = $SCF->parent_gene;  		# get the SCF gene object
+		} elsif ($SCF->Feature->can('cds')){	# is it an exon?, if so we need to findthe transcript of which that exon is a part...
+			$Trans = $SCF->parent_transcript;	# get the parent transcript
+			$Gene = $SCF->parent_gene;  		# get the SCF gene object
 		} else {warn "invalid drop-recipient object"; return 0}
 		
-		
-		my %features = %{$self->getSelectedFeatures};
-		my $strand;
 		foreach my $feature(values %features){
 			next unless $feature;
-			if ($strand && ($strand ne $feature->strand)){
-				warn "transcript will cross strands - ignored!";
-				return 0;
+			next unless $feature->isa("Bio::SeqFeatureI");
+			my $exon;
+			unless ($feature->isa("Bio::SeqFeature::Gene::ExonI")){
+				$exon=Bio::SeqFeature::Gene::Exon->new; # create a new exon object
+				$exon->_from_gff_string($feature->gff_string); # and fill it with the info fromm the current Feature::Generic
 			} else {
-				$strand = $feature->strand;
+				$exon = $feature;  # if it is already ExonI compliant, then just useit.
 			}
-		}
-		foreach my $feature(values %features){
-			next unless $feature;
-			$Trans->add_exon($feature);
+			$Trans->add_exon($exon);  # add it to the transcript
 		}
 			
 		$self->unmapFeatures([$Gene->FID]);
@@ -1094,8 +1090,6 @@ sub _receiveDropOnWidget {
 		return $self->mapFeatures(undef, [$Gene->Feature]);
 		
 	}	
-	
-
 }
 
 
@@ -1116,7 +1110,15 @@ sub _recevieDropCreateNewGene {
 	my $Trans = Bio::SeqFeature::Gene::Transcript->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");
 	foreach my $feature(values %features){
 		next unless $feature;
-		$Trans->add_exon($feature);
+		next unless $feature->isa("Bio::SeqFeatureI");
+		my $exon;
+		unless ($feature->isa("Bio::SeqFeature::Gene::ExonI")){
+			$exon=Bio::SeqFeature::Gene::Exon->new; # create a new exon object
+			$exon->_from_gff_string($feature->gff_string); # and fill it with the info fromm the current Feature::Generic
+		} else {
+			$exon = $feature;  # if it is already ExonI compliant, then just useit.
+		}
+		$Trans->add_exon($exon); # add it to the transcript
 	}
 	$Gene->add_transcript($Trans);
 	$self->MapSeq->add_SeqFeature($Gene);
