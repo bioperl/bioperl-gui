@@ -363,15 +363,44 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
 	 );
 	 my @colorlist = qw(darkblue magenta dkgreen fuschia orange purple chartreuse lightblue yellowgreen turquoise green yellow brown ltgreen);
 	
+	my $dxa;
+	my $dya;
+	my $dxb;
+	my $dyb;
+	
+	sub dxa {
+		my ($self, $newval) = @_;
+		if ($newval){$dxa = $newval}
+		$dxa=0 unless $dxa;
+		return $dxa;
+	}
+	sub dya {
+		my ($self, $newval) = @_;
+		if ($newval){$dya = $newval}
+		$dya=0 unless $dya;
+		return $dya;
+	}
+	sub dxb {
+		my ($self, $newval) = @_;
+		if ($newval){$dxb = $newval}
+		$dxb=0 unless $dxb;
+		return $dxb;
+	}
+	sub dyb {
+		my ($self, $newval) = @_;
+		if ($newval){$dyb = $newval}
+		$dyb=0 unless $dyb;
+		return $dyb;
+	}
 	
 	#___________________________________________________________
 	#ATTRIBUTES
     my %_attr_data = #     					DEFAULT    			ACCESSIBILITY
                   (	
-                    dxa					=>  [0,           		'read/write'],  # x/y coords of the draft (d) and finished (f) canvases
-                    dya  				=>  [0,           		'read/write'],
-                    dxb  				=>  [0,         		'read/write'],
-                    dyb  				=>  [0,         		'read/write'],
+                    #dxa					=>  [0,           	'read/write'],  # x/y coords of the draft (d) and finished (f) canvases
+                    #dya  				=>  [0,           	'read/write'],
+                    #dxb  				=>  [0,         		'read/write'],
+                    #dyb  				=>  [0,         		'read/write'],
                     fxa					=>  [0,           		'read/write'],
                     fya  				=>  [0,           		'read/write'],
                     fxb  				=>  [0,         		'read/write'],
@@ -738,8 +767,17 @@ sub new {
     # ***********************************************************
 
     # Create the MapCanvases with correct dimensions
+    
+    my $map_width;
 
-	my $map_width = ($self->width);
+	# remember, $self->dxa/dya are *class* variables, not instance varaibles!
+	if ($self->dya || $self->dxa){  # if a previous map exists, then we need to copy its dimensions
+		$map_width =($self->{-orientation} eq "horizontal")?($map_width = 2*($self->dyb)):($map_width = 2*($self->dxb));
+		# this looks strange, but see coment below about how AnnotMap percieves its axis location
+	} else {
+		$map_width = $self->width;  # otherwise, just use the default width
+	}
+	
 
     if ($self->{-orientation} eq "horizontal") {
 		# the SeqText widget breaks MS-Windows, and is of questionable value anyway...
@@ -751,13 +789,13 @@ sub new {
 		#$self->SeqText->insert('end', "\n");
 		#$self->SeqText->insert('end', $SeqObj->seq);
     
-		$self->dya(-$map_width/2); # each map is equally distributed
-		$self->fya(-$map_width/2); # each map is equally distributed
-		$self->dyb($map_width/2);  # around the zero axis
-		$self->fyb($map_width/2);  # around the zero axis
+		unless ($self->dya){$self->dya(-$map_width/2)} # each map is equally distributed
+		unless ($self->fya){$self->fya(-$map_width/2)} # each map is equally distributed
+		unless ($self->dyb){$self->dyb($map_width/2)}  # around the zero axis
+		unless ($self->fyb){$self->fyb($map_width/2)}  # around the zero axis
 		$self->{-axis_loc} = $map_width/2; # axis goes half-way (this is a strange bug in AnnotMap... even if you specify that the map is -100 to +100, you can't set the axis at 0, you have to set it at +100 to put it in the middle of this 200 range....
-		$self->dxb($window_length); # height is unchanged
-		$self->fxb($window_length); # height is unchanged
+		unless ($self->dxb){$self->dxb($window_length)} # height is unchanged
+		unless ($self->fxb){$self->fxb($window_length)} # height is unchanged
 
 		my $DLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);	# frame for Draft map and labels
 		my $FLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);	# frame for Finished map and labels
@@ -787,13 +825,13 @@ sub new {
 
     } else {			# vertical
     	
-		$self->dxa(-$map_width/2); # each map is equally distributed
-		$self->fxa(-$map_width/2); # each map is equally distributed
-		$self->dxb($map_width/2);  # around the zero axis
-		$self->fxb($map_width/2);  # around the zero axis
+		unless ($self->dxa){$self->dxa(-$map_width/2)} # each map is equally distributed
+		unless ($self->fxa){$self->fxa(-$map_width/2)} # each map is equally distributed
+		unless ($self->dxb){$self->dxb($map_width/2)}  # around the zero axis
+		unless ($self->fxb){$self->fxb($map_width/2)}  # around the zero axis
 		$self->{-axis_loc} = $map_width/2; # axis goes half-way (this is a strange bug in AnnotMap... even if you specify that the map is -100 to +100, you can't set the axis at 0, you have to set it at +100 to put it in the middle of this 200 range....
-		$self->dyb($window_length); # height is unchanged
-		$self->fyb($window_length); # height is unchanged
+		unless ($self->dyb){$self->dyb($window_length)} # height is unchanged
+		unless ($self->fyb){$self->fyb($window_length)} # height is unchanged
 
 		my $DLF = $self->MapFrame->Frame->pack(-side => 'left', -fill => 'both'); # frame for Draft map and labels
 		my $FLF = $self->MapFrame->Frame->pack(-side => 'left', -fill => 'both'); # frame for Finished map and labels
@@ -1616,9 +1654,26 @@ sub _processSeqFeatures {
 sub _check_and_expand_draft_canvas {
 
 	my ($self,$source) = @_;
+
+    my $canvas = $self->DraftLabelCanvas;
+    my $map = $self->DraftCanvas;
 	
 	foreach my $current_source($self->Sources){
-		return if ($current_source eq $source);  # if the given source exists, then exit this routine ASAP
+		if ($current_source eq $source){  # if the given source exists, then exit this routine ASAP
+			if ($self->{-orientation} eq "horizontal"){
+				print "\aconfigure scroll ",$self->dyb+1,"\n";
+				$canvas->configure(-scrollregion => [1, $self->dya-10, 100,        $self->dyb+10]);
+				$map->configure(-scrollregion =>    [1, $self->dya-10, $self->dxa, $self->dyb+10]);
+				$self->DraftMap->{canvas_min} = $self->dya-10; # inform AnnotMap about the new size for zooming purposes
+				$self->DraftMap->{canvas_max} = $self->dyb+10;				
+			} else {
+				$canvas->configure(-scrollregion => [$self->dxa-10, 1, $self->dxb+10, 100]);
+				$map->configure(-scrollregion =>    [$self->dxa-10, 1, $self->dxb+10, $self->dyb]);
+				$self->DraftMap->{canvas_min} = $self->dxa-10; # inform AnnotMap about the new size for zooming purposes
+				$self->DraftMap->{canvas_max} = $self->dxb+10; # the +/- 10 is because I set the canvas scroll region for the labels to be +/- 10 compared to the actual offset
+			}
+			return;
+		}
 	}
 	# at this point we have determined that the $source is a new one.
 	
@@ -1691,8 +1746,26 @@ sub _check_and_expand_finished_canvas {
 
 	my ($self, $label) = @_;
 
+    my $canvas = $self->FinishedLabelCanvas;
+    my $map = $self->FinishedCanvas;
+
+
 	foreach my $current_label($self->FinishedSourceLabels){
-		return if ($current_label eq $label);  # if the given source exists, then exit this routine ASAP
+		if ($current_label eq $label){  # if the given source exists, then set scroll region and exit this routine ASAP
+			if ($self->{-orientation} eq "horizontal"){
+				$canvas->configure(-scrollregion => [1, $self->fya-10, 100,        $self->fyb+10]);
+				$map->configure(-scrollregion =>    [1, $self->fya-10, $self->fxa, $self->fyb+10]);
+				$self->FinishedMap->{canvas_min} = $self->fya-10; # inform AnnotMap about the new size for zooming purposes
+				$self->FinishedMap->{canvas_max} = $self->fyb+10; # the +/- 10 is because I set the canvas scroll region for the labels to be +/- 10 compared to the actual offset
+
+			} else {
+				$canvas->configure(-scrollregion => [$self->fxa-10, 1, $self->fxb+10, 100]);
+				$map->configure(-scrollregion =>    [$self->fxa-10, 1, $self->fxb+10, $self->fyb]);
+				$self->FinishedMap->{canvas_min} = $self->fxa-10; # inform AnnotMap about the new size for zooming purposes
+				$self->FinishedMap->{canvas_max} = $self->fxb+10;
+			}
+				return;
+		}
 	}
 	# at this point we have determined that the $source is a new one.
 	
@@ -1943,6 +2016,7 @@ sub _drawDraftLabels {
     	}	
     }
 	if ($self->{-orientation} eq "horizontal"){
+		print "\aSCROLL ",$self->dyb+10,"\n";
 		$canvas->configure(-scrollregion => [1, $self->dya-10, 100,        $self->dyb+10]);
     	$map->configure(-scrollregion =>    [1, $self->dya-10, $self->dxa, $self->dyb+10]);
 		$self->DraftMap->{canvas_min} = $self->dya-10; # inform AnnotMap about the new size for zooming purposes
