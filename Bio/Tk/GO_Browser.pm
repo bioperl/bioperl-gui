@@ -374,7 +374,7 @@ sub new {
 	if ($self->dbname){$connect_hash{-dbname}=$self->dbname}
 	if ($self->host){$connect_hash{-dbhost}=$self->host}
 	if ($self->dbuser){$connect_hash{-dbuser}=$self->dbuser}
-	if ($self->dbauth){$connect_hash{-dbname}=$self->dbauth}
+	if ($self->dbauth){$connect_hash{-dbauth}=$self->dbauth}
 	
 	
 	unless ($self->GO_API){$self->GO_API(GO::AppHandle->connect(%connect_hash))};
