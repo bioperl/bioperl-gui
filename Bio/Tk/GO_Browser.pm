@@ -397,7 +397,7 @@ sub new {
 
 
 	# set up the three Query frame elements - a label, a text box, and a button
-	my $query_frame = $frame->Frame();
+	my $query_frame = $self->frame->Frame();
 	my $label = $query_frame->Label(-text => "Query:", -background => "white", -foreground => "black");
 	$label->pack(-side => 'left', -expand => 0);
 	my $query_button = $query_frame->Button(-text => "execute", -command => sub {$self->do_query});
@@ -455,12 +455,9 @@ sub new {
 
 	$self->addTreeNode($graph);
 
-	$self->def_text->pack(-side => 'bottom', -fill => 'x');
-	$query_frame->pack(-side => 'top', -expand => 0, -fill => 'x');
-	$self->browser->pack(-side => 'top', -expand => 1, -fill => "both");
-
-
-	
+	$self->def_text->pack(-side => 'bottom', -expand => 1, -fill => 'x');
+	$query_frame->pack(-side => 'top', -expand => 1, -fill => 'x');
+	$self->browser->pack(-side => 'top', -expand => 1, -fill => "x");
 
 	$self->frame->Unbusy;
     return $self;
@@ -518,8 +515,8 @@ sub _addPathToTree {
 		}
 		else {
 			my $extra;
-			if ($self->count eq "deep"){$extra =  "(".($self->GO_API->get_deep_product_count({term=>$node})).")"}
-			elsif ($self->count eq "shallow"){$extra = "(".($self->GO_API->get_product_count({term=>$node})).")"}		
+			if ($self->count && ($self->count eq "deep")){$extra =  "(".($self->GO_API->get_deep_product_count({term=>$node})).")"}
+			elsif ($self->count && ($self->count eq "shallow")){$extra = "(".($self->GO_API->get_product_count({term=>$node})).")"}		
 			$browser->add($termstring, -text=>($node->name . $extra));
 			$browser->entryconfigure($termstring, -style=>'branch');
 			$browser->setmode($termstring, "close");
@@ -529,9 +526,9 @@ sub _addPathToTree {
 	}
 	$termstring .=  $term->name;	
 	unless ($browser->info("exists", $termstring)){
-		my $extra;
-		if ($self->count eq "deep"){$extra =  "(".($term->n_deep_products).")"}
-		elsif ($self->count eq "shallow"){$extra = "(".($term->n_products).")"}		
+		my $extra = "";
+		if ($self->count && ($self->count eq "deep")){$extra =  "(".($term->n_deep_products).")"}
+		elsif ($self->count && ($self->count eq "shallow")){$extra = "(".($term->n_products).")"}		
 		$browser->add($termstring, -text => (($term->name) . $extra));
 		my $openclose = ($children)?"open":"close";
 		$browser->setmode($termstring, $openclose);
@@ -581,19 +578,11 @@ sub do_query {
 	foreach my $param(@param){
 		$param = ($param =~ /\s*(.*)\s*/ && $1);
 		my $graph = $self->GO_API->get_graph_by_search("*$param*", 1, {acc=>1, name=>1});
+		last unless($graph);
 		$self->addTreeNode($graph, "select");
 	}
 	$self->frame->Unbusy;
 }
-
-sub product_list {
-	my ($self) = @_;
-	my $TERM = $self->term;
-	my $products = $TERM->product_list;
-	return $products;  
-
-}	
-
 
 # ********  implement all of GO::Model::Term interfaces
 

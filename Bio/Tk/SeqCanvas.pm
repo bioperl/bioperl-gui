@@ -842,7 +842,7 @@ sub new {
 					    -command => sub {$self->DoZoom()} );
     $zoomscale->pack(-side => 'left', -expand => 'yes', -fill => 'x', -anchor => 'e');    	
     $self->ZoomBar($zoomscale);
-
+	$self->DoZoom;
     # initialize the canvas with the default rows & colors
     foreach my $source(@{$self->InitialSources}){
     	$self->_check_and_expand_draft_canvas($source);
@@ -1499,8 +1499,7 @@ sub DoZoom  {
 		$trigger_point, $coderef, $trigger_struct);
 
     my $current_loc = $self->current_loc;     # the location of the last clicked widget
-
-    $draftc->delete('selection_box');           # since boxes don't zoom they have to be deleted
+	$draftc->delete('selection_box');           # since boxes don't zoom they have to be deleted
     $draftc->dtag('selected');                  # along with corresponding "selected" tags
     $finishedc->delete('selection_box');
     $finishedc->dtag('selected');
@@ -2095,7 +2094,7 @@ sub mapFeatures {
 	# sub objects, such as transcripts and exons, are handled delicately
 	push @IDs, ($self->_mapOntoFinished($features));  # takes an array ref of top-level objects
 
-    return \@IDs;  # return the list of FIDxxx to the caller in case they want to know...
+	return \@IDs;  # return the list of FIDxxx to the caller in case they want to know...
 }
 
 sub _mapOntoFinished {
