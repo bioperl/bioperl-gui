@@ -286,7 +286,7 @@ sub query_keywords {
 	# all matches are shown in the box
 	# multiple keywords are combined with "OR" at the moment.
 my $init_query = "select
-					definition,
+					def.term_definition,
 					child.acc,
 					child.name,
 					count(term2.term1_id)
@@ -303,8 +303,8 @@ my $init_query = "select
 								term2term as term2
 								on child.id = term2.term1_id ";
 my $WHERE = "WHERE ";
-my $query_param = "((def.definition Like ? OR
-					syn.synonym Like ? OR
+my $query_param = "((def.term_definition Like ? OR
+					syn.term_synonym Like ? OR
 					child.name Like ?) AND
 					parent.id = relation.term1_id and
 					child.id = relation.term2_id) ";
@@ -446,7 +446,7 @@ sub showKeys {
 sub _set_queries {
 	my ($self) = @_;
 	$self->tree_query($self->dbh->prepare("select
-											definition,
+											def.term_definition,
 											child.acc,
 											child.name,
 											count(term2.term1_id)
@@ -467,7 +467,7 @@ sub _set_queries {
 													
 													
 	$self->root_query($self->dbh->prepare("select
-										definition,
+										def.term_definition,
 										child.acc,
 										child.name,
 										count(term2.term1_id)
@@ -482,7 +482,7 @@ sub _set_queries {
 												term2term as term2
 												on child.id=term2.term1_id
 												where
-												parent.type = ? and
+												parent.term_type = ? and
 												parent.id = relation.term1_id and
 												child.id = relation.term2_id
 												group by child.acc
