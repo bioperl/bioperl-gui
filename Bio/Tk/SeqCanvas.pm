@@ -1562,6 +1562,7 @@ sub DoZoom  {
 sub _processSeqFeatures {
     # all features should be top_SeqFeatures when they enter this routine...
     my ($self, $features) = @_;
+    return unless $features;
     my @features = @{$features};
 		
 	$self->_extract_sources(\@features);  # this gets the feature and all sub-features, updates SCF's labels and canvas sizes
@@ -2283,11 +2284,15 @@ sub deleteFeatures {
 	    return unless $unmapped;
 	    my $remapped=$self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);  #this needs to be implemented in Bio::Seq
 	    $self->mapFeatures(undef,[$gene]) if $gene->entire_seq;   #only remap if the gene still exists
-	    $self->mapFeatures(undef,$remapped);
+	    $self->mapFeatures(undef,$remapped) if $remapped && @$remapped;
 	} else {
 	    my $unmapped=$self->unmapFeatures([$FeatureID]);
 	    my $remapped=$self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);  #this needs to be implemented in Bio::Seq
-	    $self->mapFeatures(undef,$remapped);
+	    if (defined $remapped) {
+		$self->mapFeatures(undef,$remapped) if @$remapped;
+	    } else {  #unsuccessful deletion
+		$self->mapFeatures(undef,[$SCF->Feature]);  #then remap the not deleted feature
+	    }
 	}
     }
 }
