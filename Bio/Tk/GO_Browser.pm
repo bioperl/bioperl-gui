@@ -47,12 +47,14 @@ consequential or incidental, arising from the use of the software.
     			
   # set up binding of button-2 to retrieve information
   # NOTE the difference in the binding call compared to version 1.0
-    $GO->GOText->bind("<Button-2>" => sub {	
-       my $acc = $GO->GOAcc;
-       my $term = $GO->Term;
-       my $def = $GO->Definition;
+  my $Annotation;
+  $GO->GOText->bind("<Button-2>" => sub {
+       $Annotation = $GO->Annotation; # retrieve the annotation object (see GO_Annotation.pm)
+       my $acc = $Annotation->GO_id;
+       my $term = $Annotation->term;
+       my $def = $Annotation->def;
        print "Acc = $acc Term = $term Def = $def\n\n";
-    });
+       });
     	
  }
 
@@ -105,6 +107,7 @@ use Tk;
 use Tk::Text;
 use Carp;
 use DBI;
+use GO_Annotation;
 
 use vars qw($AUTOLOAD);
 
@@ -120,9 +123,6 @@ use vars qw($AUTOLOAD);
                     DefText			=> [undef, 			'read/write'],   # the definition of the term
                     query_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record ->fetchall_arrayref's leading to our current position
                     ObjectType		=> [undef, 			'read/write'],	 # this can be called from a Tk::Text widget, or a Tk::Scrolled("Text") widget, which affects the binding calls in showKeys
-                  	Term			=> [undef, 			'read/write'],	 # the GO Ontology term just middle-clicked upon
-                  	Definition		=> [undef, 			'read/write'],	 # the definition of the term just middle-clicked upon
-                  	GOAcc			=> [undef, 			'read/write'],	 # the acc id of the term just middled-clicked upon
                   	TopWindow		=> [undef, 			'read/write'],
                   	dbh				=> [undef, 			'read/write'],
                   	GO_IP			=> ['headcase.lbl.gov', 'read/write'],
@@ -130,6 +130,7 @@ use vars qw($AUTOLOAD);
                   	tree_query		=> [undef, 			'read/write'],   # compiled query to step down a branch to next node
                   	root_query		=> [undef, 			'read/write'],   # compiled query to go to root
                   	keyword_query	=> [undef, 			'read/write'],   # compiled query to search for a keyword
+                  	Annotation		=> [undef, 			'read/write'],
                   	
                   );
 
@@ -190,7 +191,9 @@ sub dbAccess {
     my $GO_IP = $self->GO_IP;
     my $GO_dbName = $self->GO_dbName;
 	my ($dsn) = "DBI:mysql:$GO_dbName:$GO_IP";
-	my $dbh = DBI->connect($dsn,undef,undef, {RaiseError => 1})or die "can't connect to database";
+	my $dbh = DBI->connect($dsn,undef,undef, {RaiseError => 1}) or die "can't connect to database";
+	$dbh or die "\n\n GO-database connection failed \n\n";
+	
 	return $dbh;
 }
 
@@ -413,10 +416,9 @@ sub showKeys {
 						
 			$Text->tagBind($acc, "<Button-2>",                      # bind the middle button
 						sub {
-							$self->GOAcc($acc);                     # encapsulate the data
-							$self->Term($term);                     # this can be obtained from outside of the script
-							$self->Definition($def)}
-						);
+							my $Annotation = GO_Annotation->new(id => $acc, term => $term, def => $def); # create a new, partially filled annotation object
+							$self->Annotation($Annotation);  # encapsulate it so that it can be retrieved from outside.
+						});
 			
 			
 			if ($self->ObjectType eq "Scrolled"){     # use this if called as a Scrolled text widget
