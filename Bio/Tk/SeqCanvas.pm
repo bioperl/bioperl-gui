@@ -208,6 +208,7 @@ $Bio::Tk::SeqCanvas::VERSION='1.0';
 			MapSeq		=>	[undef,			'read/write'],
 			MapFrame	=>	[undef,			'read/write'],
 			ZoomFrame	=>	[undef,			'read/write'],
+			ScrollFrame =>  [undef, 		'read/write'],
 			DraftCanvas	=>	[undef,			'read/write'],
 			FinishedCanvas	=>	[undef,			'read/write'],
 			AnnotTextFrame  =>  [undef, 		'read/write'],  # as below
@@ -432,9 +433,14 @@ sub new {
 
     $self->SysMess($TOP);	# a handle out to the top-level window system for passing messages
 
-    $self->MapFrame($frame->Frame->pack(-side => 'top')); # the sub-frame to hold the two maps
     # the sub-frame to hold the zoom-bar
-    $self->ZoomFrame($frame->Frame->pack(-side => 'bottom', -fill => 'x')); 
+    $self->ZoomFrame($frame->Frame->pack(-side => 'bottom', -fill => 'x'));
+    if ($self->{-orientation} eq "horizontal"){
+    	$self->ScrollFrame($frame->Frame->pack(-side => 'bottom', -fill => 'x'));
+    } else {
+    	$self->ScrollFrame($frame->Frame->pack(-side => 'right', -fill => 'y'));
+    }
+    $self->MapFrame($frame->Frame->pack(-side => 'top')); # the sub-frame to hold the two maps
 
     # assign some additional values required by the Canvas and AnnotMap
     # ***************** TEMPORARY HACK
@@ -496,9 +502,9 @@ sub new {
 	$self->{-axis_loc} = (($self->yb)/2); #/   # axis goes half-way through the map on the Y axis
 	$self->xb($window_length); # height is unchanged
 
-	my $s = $self->MapFrame->Scrollbar('-orient' => 'horizontal', '-command' => sub {$self->FinishedCanvas->xview(@_); $self->DraftCanvas->xview(@_)});
+	my $s = $self->ScrollFrame->Scrollbar('-orient' => 'horizontal', '-command' => sub {$self->FinishedCanvas->xview(@_); $self->DraftCanvas->xview(@_)});
     	$self->DraftCanvas->configure('-xscrollcommand' => ['set' => $s] ); # since they are identical only one canvas needs to feed-back to the scroll bar to show it's extents
-      	$s->pack('-side'=>'bottom', '-fill'=>'x', '-expand' => 'x');
+     	$s->pack('-side'=>'bottom', '-fill'=>'x', '-expand' => 'x');
         $self->ScrollBar($s);
     } else {			# vertical
 	my $DLF = $self->MapFrame->Frame->pack(-side => 'left'); # frame for Draft map and labels
@@ -511,7 +517,7 @@ sub new {
 	$self->{-axis_loc} = (($self->xb)/2); #/   # axis goes half-way through the map on the X axis
 	$self->yb($window_length); # height is unchanged
 
-	my $s = $self->MapFrame->Scrollbar('-orient' => 'vertical', '-command' => sub {$self->FinishedCanvas->yview(@_); $self->DraftCanvas->yview(@_)});
+	my $s = $self->ScrollFrame->Scrollbar('-orient' => 'vertical', '-command' => sub {$self->FinishedCanvas->yview(@_); $self->DraftCanvas->yview(@_)});
     	$self->DraftCanvas->configure('-yscrollcommand' => ['set' => $s] );
     	$s->pack('-side'=>'right', '-fill'=>'y', '-expand' => 'y');
     	$self->ScrollBar($s);
