@@ -27,81 +27,37 @@ consequential or incidental, arising from the use of the software.
  use strict;
 
  Begin();
+
  MainLoop;
 
  sub Begin {
 
-	# un-comment the line below if ontology XML files have NOT already been parsed
-	# this must be done the first time you run this module, and need not be run again
-	# unless you download newer versions of the XML files.
-	#
-	#  &ParseOntology;
-	#
-	# =================================================
-		
- 	my $Textbox;
- 	my $GO;
+  my $Textbox;
+  my $GO;
     	
- 	foreach my $section('component', 'process', 'function'){   # each of the current GO ontology sections
-			# create new main window.
-			# NOTE multiple browers must exists in different main windows
-			# if the binding of the middle button is to function correctly.  If that is
-			# not required, then this line can go outside of the foeach loop to make a single
-			# frame with all GO browsers packed together.
- 		my $mw = MainWindow->new();
+  # create new main window.
+  my $mw = MainWindow->new(-title => "GO Ontology Browser");
     		
- 			# create new textbox with scrollbars and relevant pack options
- 		$Textbox->{$section} = $mw->Scrolled("Text", -background => "black")->pack(-expand => 1, -fill => "both");
+  # create new textbox with scrollbars
+  $Textbox = $mw->Scrolled("Text", -background => "black")->pack(-fill => "both", -expand => 1);
     		
- 			# alternate method to create new textbox, NOT RECOMMENDED!!  (Hard to intercept the double-clicks before they highlight the text!!)
- 			#$Textbox->{$section} = $mw->Text(-background => "black")->pack; 			
+  # alternate method to create new textbox, NOT RECOMMENDED!!
+  #$Textbox = $mw->Text(-background => "black")->pack; 			
     		
- 			# create new GO browser, send it a reference to the MainWindow so that it can send info to title-bar.
- 		$GO->{$section} = GO_Browser->new($Textbox->{$section}, $section, TopWindow => $mw);
+  # create new GO browser
+  $GO = GO_Browser->new($Textbox, TopWindow => $mw);
     		
- 			# check for failure
- 		if ($GO->{$section} == 0){
- 			print "\n\nBrowser reports unknown ontology type for $section\n\n";
- 			next
- 		} elsif ($GO->{$section} == -1){
- 			print "\n\nBrowser unable to locate parsed ontology file for $section\n\n";
- 			next
- 		} elsif ($GO->{$section} == -2){
- 			print "\n\nBrowser unable to instantiate in this type of Tk widget.  Must be Text or Scrolled\n\n";
- 			next
- 		}
+    			
+  # set up binding of button-2 to retrieve information
+    $Textbox->bind("<Button-2>" => sub {	
+       my $acc = $GO->GOAcc;
+       my $term = $GO->Term;
+       my $def = $GO->Definition;
+       print "Acc = $acc Term = $term Def = $def\n\n";
+    });
     	
- 			# set up binding of button-2 to retrieve information
- 		$Textbox->{$section}->bind("<Button-2>" =>
- 			sub {my $term = $GO->{$section}->Term;
- 				my $def = $GO->{$section}->Definition;
- 				print "Term = $term Def = $def\n\n";
- 			});
- 	}
  }
 
- sub ParseOntology {
-    	
- 	# do the initial parsing of the GO ontology XML files
- 	# these files are available from http://www.geneontology.org/
- 	# this routine must be run *once* before the GO browser will function.
-
- 	# == FILL /home/user/full/path with the full path to your XM files ==
- 	
- 	my $ontology = GO_Browser->parseOntologyFile("/home/user/full/path/component.xml", "component");
- 	if ($ontology == 0){print "\nparse fail - component ontology type not known\n\n"; return 0}
- 	if ($ontology == -1){print "\nparse fail - component ontology XML file not found\n\n"; return 0}
-    	
- 	$ontology = GO_Browser->parseOntologyFile("/home/user/full/path/process.xml", "process");
- 	if ($ontology == 0){print "\nparse fail - process ontology type not known\n\n"; return 0}
- 	if ($ontology == -1){print "\nparse fail - process ontology XML file not found\n\n"; return 0}
-    	
- 	$ontology = GO_Browser->parseOntologyFile("/home/user/full/path/function.xml", "function");
- 	if ($ontology == 0){print "\nparse fail - function ontology type not known\n\n"; return 0}
- 	if ($ontology == -1){print "\nparse fail - function ontology XML file not found\n\n"; return 0}
-    	
- 	undef $ontology;
- }
 
 
 =head2 DESCRIPTION and ACKNOWLEDGEMENTS
@@ -112,23 +68,32 @@ Double-clicking branches moves you up and down the tree.  Middle-clicking on any
 clicked-upon term and definition (if available) and this event can be trapped by the top-level windowing
 system to retrieve this info for whatever external application you are building.
 
-This has only been tried and tested on the XML files that were available on Jan 31, 2001.  I hope that
-it is stable enough to parse newer or older versions, but as these ontology XML files are in a state of
-flux at the moment I can't promise anything.
+Unlike previous versions, this browser connects directly to the GO ontology database.
+Therefore it requires no pre-downloading and parsing of the XML files (halleluja!)
 
-Parsing takes about 10-15 minutes, and must be done only once.  The data is then stored in three files which,
-by default, live in the same folder as this script.  The files end in the extension .gob, which generally
-represents how I feel about them.
-
-Loading of all three .gob files takes a total of ~2 seconds (single Celeron 500MHz).
-
-Please send all complaints to me, but remember, I never promised the world.  This is just a hack :-)
-
+Because it is connecting "live" there is sometimes a small delay while the query is being
+sent over the net.  The number of queries required for the browser
+has been mitigated as much as possible by some clever left-joins
+written by Dave Block (dblock@gene.pbi.nrc.ca).  Thanks Dave!
 
 =head2 CONTACT
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
 
+=head2 Options
+
+ $GO = GO_Browser->new(
+   $Textbox,          	# the Tk Text widget
+   TopWindow => $mw,   # the top-level window (or undef)
+   GO_IP => "headcase.lbl.gov",  # the IP address of your GO database
+   GO_dbName => "go"   # the name of the GO database
+ );
+
+=head2 Methods
+
+ $GO->GOAcc	# returns Accession number of the middle-clicked term
+ $GO->Term   # returns the Term name of the middle-clicked term
+ $GO->Definition  # returns the associated definition
 
 =cut
 
@@ -139,6 +104,8 @@ use strict;
 use Tk;
 use Tk::Text;
 use Carp;
+use DBI;
+
 require XML::Simple;
 #use Tk::widgets qw(Balloon);
 use Storable;
@@ -151,18 +118,19 @@ Tk::Widget->Construct('GO_Browser');
 	#___________________________________________________________
 	#ATTRIBUTES
     my %_attr_data = #     				DEFAULT    	ACCESSIBILITY
-                  (	process_root 	=> ["GO:0008150", 	'read/write'],   # the root GO numbers for the three ontologies
-                    function_root 	=> ["GO:0003674", 	'read/write'],   #    "
-                    component_root 	=> ["GO:0005575", 	'read/write'],   #    "
-                    instance_root 	=> [undef, 			'read/write'],   # which of the above root files do we use in this instance
-                    GOText 			=> [undef,			'read/write'],   # the text box
-                    GOpath			=> ["./", 			'read/write'],   # the path to the GOxxx.wb files, requires trailing slash.
-                    GO				=> [undef, 			'read/write'],   # holds the full imported GO ontology hash
+                  (	GOText 			=> [undef,			'read/write'],   # the text box
                     path_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record $key's leading to our current position
                     ObjectType		=> [undef, 			'read/write'],	 # this can be called from a Tk::Text widget, or a Tk::Scrolled("Text") widget, which affects the binding calls in showKeys
                   	Term			=> [undef, 			'read/write'],	 # the GO Ontology term just middle-clicked upon
                   	Definition		=> [undef, 			'read/write'],	 # the definition of the term just middle-clicked upon
+                  	GOAcc			=> [undef, 			'read/write'],	 # the acc id of the term just middled-clicked upon
                   	TopWindow		=> [undef, 			'read/write'],
+                  	dbh				=> [undef, 			'read/write'],
+                  	GO_IP			=> ['headcase.lbl.gov', 'read/write'],
+                  	GO_dbName		=> ['go',			'read/write'],
+                  	child_query		=> [undef, 			'read/write'],   # compiled query for "are there children of this term" - used for coloring branches versus leaves
+                  	level_query		=> [undef, 			'read/write'],   # compiled query for "what are the children of this term" - used to get teh children of a branch
+                  	def_query		=> [undef, 			'read/write'],   # compiled query for "what is the definition of this term"
                   	
                   );
 
@@ -218,11 +186,19 @@ sub AUTOLOAD {
     croak "No such method: $AUTOLOAD";
 }
 
+sub dbAccess {
+    my ($self) = @_;
+    my $GO_IP = $self->GO_IP;
+    my $GO_dbName = $self->GO_dbName;
+	my ($dsn) = "DBI:mysql:$GO_dbName:$GO_IP";
+	my $dbh = DBI->connect($dsn,undef,undef, {RaiseError => 1})or die "can't connect to database";
+	return $dbh;
+}
+
 
 sub new{
-	my ($caller, $text, $ontology, %args) = @_;
+	my ($caller, $text, %args) = @_;
 	my ($GO);
-	return 0 if (($ontology ne "process") && ($ontology ne "function") && ($ontology ne "component"));
 	return -2 if ((ref($text) ne "Tk::Text") && (ref($text) ne "Tk::Frame"));
 	
 	my $caller_is_obj = ref($caller);
@@ -240,237 +216,169 @@ sub new{
 		$self->{$attrname} = $self->_default_for($attrname) }
     }
 
+    my $dbh = $self->dbAccess;
+    $self->dbh($dbh);
+
 
     $self->GOText($text);  # set an internal reference to the text-box which will hold the browser.
     $self ->ObjectType(((ref($text) eq "Tk::Text")?"Text":"Scrolled")); # set object type to Text or Scrolled widget (Scrolled is actually a Tk::Frame object)
 	
-	my $GOpath = $self->{GOpath};
-	
-    my $gofile;
-	if ((-e $GOpath . "GOprocess.gob") && ($ontology eq "process")){      # set which file to open
-		$gofile = $GOpath . "GOprocess.gob";
-	}
-	elsif ((-e $GOpath . "GOfunction.gob") && ($ontology eq "function")){
-		$gofile = $GOpath . "GOfunction.gob";	
-	}
-	elsif ((-e $GOpath . "GOcomponent.gob") && ($ontology eq "component")){
-		$gofile = $GOpath . "GOcomponent.gob";	
-	}
-    else {return -1}  # wb-parsed function does not exist yet
+	$self->level_query($self->dbh->prepare("select
+											definition,
+											child.acc,
+											child.name,
+											count(term2.term1_id)
+											from term as parent,
+											term as child,
+											term2term as relation
+											left join
+												term_definition as def
+												on def.term_id= child.id
+												left join
+													term2term as term2
+													on child.id=term2.term1_id
+													where
+													parent.acc = ? and
+													parent.id = relation.term1_id and
+													child.id = relation.term2_id
+													group by child.acc"));	
+	$self->showKeys("GO Ontology", $self->query_root);       # show the keys at root level
 
-    $GO = retrieve($gofile);  # this is a thaw of the frozen data
-
-    #  **************  store the parsed GO information in self->GO
-    $self->GO($GO);
-    # ************************************************************
-
-    (($ontology eq "process" && ($self->instance_root($self->process_root))) ||    # set this instance of GO:nnn "root" value to the
-    ($ontology eq "function" && ($self->instance_root($self->function_root))) ||   # encapsulated default for the ontology file
-    ($ontology eq "component" && ($self->instance_root($self->component_root))));
-
-    $self->showKeys($self->instance_root);  # show the keys at this level
-
-    return $self;                        # return handle to self
+    return $self;                     # return handle to self
 }
 
-sub showKeys {    # this subroutine prints out the **CHILDREN** of the Key-level passed in $GOkey
-	my ($self, $GOkey) = @_;    # $GOkey is eg. "GO:0008150"
-	my $ThisLevel = $self->GO->{$GOkey};  # get the entry for this level now, for later clarity
+sub query_root {  # query the root level
+	my ($self) = @_;
 	
-	my $Text = $self->GOText;       # and is abstracted so that at any level you can query the sub level keys
-	$Text->configure(-state => "normal");
-	my $found; # a flag if there are sub-level keys available
+	my $start_qu = $self->dbh->prepare("select
+										definition,
+										parent.acc,
+										child.acc,
+										child.name,
+										count(term2.term1_id)
+										from term as parent,
+										term as child,
+										term2term as relation
+											left join
+											term_definition as def
+											on
+											def.term_id = child.id
+												left join
+												term2term as term2
+												on child.id=term2.term1_id
+												where
+												parent.type = 'root' and
+												parent.id = relation.term1_id and
+												child.id = relation.term2_id
+												group by child.acc
+											");
+	$start_qu->execute;
+	my %GO_hash;
+	my ($def, $parent, $acc, $term, $children, $root_acc);
+	while (($def, $parent, $acc, $term, $children) = $start_qu->fetchrow_array){
+		$root_acc = $parent;
+		$GO_hash{$acc} = [$term, $def, $children];    # hard coded that they have children
+	}
+	return ($root_acc, \%GO_hash);
+}
+
+
+sub query_level {
+	my ($self, $parent_acc) = @_;
+	
+	$self->level_query->execute($parent_acc);
+	my %GO_hash;
+	while (my ($def, $acc, $term, $children) = $self->level_query->fetchrow_array){
+		$GO_hash{$acc} = [$term, $def, $children];
+	}
+	return ($parent_acc, \%GO_hash);
+}
+
+sub showKeys {
+	my ($self, $parentterm, $parent_acc, $GO_hashref) = @_;    # hash is {acc}={term} where acc is eg. "8150", which is effectively "O:0008150" in the XML docs
+	
+	my %GO_hash = %{$GO_hashref};    # get the hash of things to display
+	
+	my $Text = $self->GOText;       # get the text-box reference
+	$Text->configure(-state => "normal");  # empty it and make it writable
 	$Text->delete("1.0", "end");
-	$Text->insert("end", "/                         \n", ["root"]);
+	
+	$Text->insert("end", "/                         \n", ["root"]);     # make the '/' root level symbol
+   	$Text->tagConfigure("root", -foreground => "yellow");  				# TO GO TO ROOT
+   	$Text->tagBind("root", "<Double-Button-1>",                         # bind the double-click
+   			sub {undef $self->{path_stack};                             # delete everything from the stack
+   				$self->showKeys("GO Ontology", $self->query_root);      # refresh the browser with the root contents
+   				$self->TopWindow->configure(-title => "GO Ontology");   # configure the title
+   				$self->TopWindow->update;
+   			});
+	
 	unless ($#{$self->{path_stack}} < 0){                                   # IF THERE IS NO TREE TO MOVE UP THEN DONT DO THIS
 		$Text->insert("end", "../                        \n", ["parent"]);	# TO MOVE UP THE TREE
 		$Text->tagConfigure("parent", -foreground => "yellow");
       	$Text->tagBind("parent", "<Double-Button-1>",
-      			sub {my $parent = shift @{$self->{path_stack}};   	# take off of the stack the GO:NNN of the parent,
-      				if ($self->TopWindow){$self->TopWindow->configure(-title => $self->GO->{$parent}->{"term"})};
-      				$self->showKeys($parent);                        # then call this routine with the parents address
+      			sub {my $grandterm = shift @{$self->{path_stack}};   	# take off of the stack the verbose TERM of the parent,
+      				 my $grandparent = shift @{$self->{path_stack}};    # take off of the stack the Acession number of the parent,
+      				
+      				$self->showKeys($grandterm, $self->query_level($grandparent));  # then call this routine with the parents address
+      				$self->TopWindow->configure(-title => $grandterm);
+      				$self->TopWindow->update;
       				}
       			);
    	}
    	
-   	$Text->tagConfigure("root", -foreground => "yellow");  	# TO GO TO ROOT
-   	$Text->tagBind("root", "<Double-Button-1>",
-   			sub {$self->showKeys($self->instance_root)} # simply take the root address from the encapsulated data and call this routine
-   			);
    	
-	foreach my $child(keys(%{$ThisLevel})){					# ask for the sub-level keys--> there are always two:  term and definition
-		if ($child ne "term" && $child ne "definition"){  	# ignore the term and def of the *current* level
-			if ($child eq "genes"){
-				if ($#{$ThisLevel->{"genes"}} == -1){
-					next;  # if there are no asscociated genes then skip this entry
-				} else {
-					my @genes = @{$ThisLevel->{"genes"}};	# get the array of genes
-					foreach my $gene(@genes){
-						chomp $gene;  # ensure one and only one newline character
-						$Text->insert('end', $gene . "\n", [$gene]);           # print it,and tag it with its key GO:nnnnnn
-					    $Text->tagBind($gene, "<Button-2>",
-									sub {
-										$self->Term($gene);
-										$self->Definition("undefined")}
-									);
-						$Text->tagConfigure($gene, -foreground => "lightblue"); 			
-					}
-					next;
-				}
-			}
-			$found = 1;    								# flag that there was a sub-level key found
-			my $term = $ThisLevel->{$child}->{"term"} . "\n";  # take the term phrase of the sub-level
-			$Text->insert('end', $term, [$child]);           # print it,and tag it with its key GO:nnnnnn
-			my $def =  $ThisLevel->{$child}->{"definition"}?$ThisLevel->{$child}->{"definition"}:"No Definition Available"; # take the def phrase of the sub level
+	foreach my $acc(keys %GO_hash){					# ask for the sub-level keys--> there are always two:  term and definition
 			
-			my @ChildsChildren = (keys %{$ThisLevel->{$child}});	# now query if this child itself has children, or if it is a "leaf"
-			if ($#ChildsChildren > 2){       # if it has more than the default number of tags (3)
-				$Text->tagConfigure($child, -foreground => "red"); # if it is not a leaf, then make it red
-				$Text->tagBind($child, "<Double-Button-1>",
+			my ($term, $def, $children) = @{$GO_hash{$acc}};  # take the term phrase of the sub-level
+			$term .= "\n";
+			$Text->insert('end', $term, [$acc]);           # print it,and tag it with its key GO:nnnnnn
+			
+			$def = "No Definition Available" if (!$def);
+			
+			if ($children > 0){	                                 # if this term has children then it is not a leaf
+				$Text->tagConfigure($acc, -foreground => "red"); # if it is not a leaf, then make it red
+				$Text->tagBind($acc, "<Double-Button-1>",
 						sub {                                   # if it is double-clicked, then
-							unshift @{$self->{path_stack}}, $GOkey;  # stick this parent onto the stack to come back to this point later
-							if ($self->TopWindow){$self->TopWindow->configure(-title => $self->GO->{$child}->{"term"})};
-      						$self->showKeys($child);  # then call the routine using this child as the next root
+							unshift @{$self->{path_stack}}, $parent_acc;  # stick this parent accession number onto the stack for backing up purposes
+							unshift @{$self->{path_stack}}, $parentterm;  # stick this parent TERM onto the stack
+							chomp $term;                                  # remove the newline character we added
+							$self->showKeys($term, $self->query_level($acc));  	# then call the routine using this child as the next root
+						 	$self->TopWindow->configure(-title => $term);$self->TopWindow->update;
 						 }
 						);
 			} else {
-				$Text->tagConfigure($child, -foreground => "green");  # if it is a leaf, then color it green
+				$Text->tagConfigure($acc, -foreground => "green");  # if it is a leaf, then color it green
 			}
 			
 						
-			$Text->tagBind($child, "<Button-2>",
+			$Text->tagBind($acc, "<Button-2>",                      # bind the middle button
 						sub {
-							$self->Term($term);
+							$self->GOAcc($acc);                     # encapsulate the data
+							$self->Term($term);                     # this can be obtained from outside of the script
 							$self->Definition($def)}
 						);
+			
 			
 			if ($self->ObjectType eq "Scrolled"){     # use this if called as a Scrolled text widget
 				my @bindings = $Text->Subwidget("text")->bindtags();
 				shift @bindings;  # get rid of the Tk::Text binding itself to prevent highlighting of the sequence
-				unshift @bindings, $child;
+				unshift @bindings, $acc;
 				
 				$Text->Subwidget("text")->bindtags(\@bindings);
 			} else {									# use this if called as a normal text widget
 				$Text->bindtags(['all',
 								'.',
-								$child,
+								$acc,
 								'parent',               # changed the order of binding
 								'root', '.text',]); 	# because the text-box itself will respond to
 			}                                           # double-clicks by highlighting the entire text!
 			
 			# put baloon-definitions here - not yet implemented
 			#$Text->tagBind($key, "<Enter>")
-		
-		}	# end of IF
-	} # end of foreach my $child
+	} # end of foreach my $acc
 }
 
 
-sub parseOntologyFile {
-
-	my ($caller, $filename, $type) = @_;    # caller will normally be an uninstantiated GO_browser, $filename is the full path, $type is the ontology type
-    my $xs = new XML::Simple();
-
-    my $GoPath = (ref($caller) && $caller->{GOpath})?$caller->{GOpath}:"./";  # if caller is an object try to extract the path, otherwise use the default
-
-    return 0 if (!  (($type eq "function") || ($type eq "component") || ($type eq "process"))  ); # must be a valid ontology type
-
-    if (-e $filename){open IN, $filename or die "\nparser could not open the XML ontology file for first parsing pass\n";}
-    else {return -1}
-
-    open OUT, ">$GoPath" . "tmpGOfile.remove_me" or die "\nparser could not open temporary output file $!\n";
-    while (my $line = <IN>){
-    	if ($line =~ /^\s*\!/){print "deleted:   $line\n\n"; next}   # get rid of the GO comment lines which begin with an !
-    	if ($line =~ /[^<>:;\(\)\,\."'!\/\+\-\=%\?\[\]\w\s\d]/){print "modified:   $line";$line =~ s/[^<>:;\(\)\,\."'!\/\+\-\=%\w\s\d]//g;print "NEW:   $line\n\n"}  # get rid of any unusual characters... and the GO ontology XML files contain all sorts of invisible non-whitespace characters...
-    	if ($line =~ /<up>/){print "FormatTagRemoved:   $line"; $line =~ s/<up>//g;print "NEW:   $line\n\n"}   # these are superscript tags that XML::Parser cant interpret correctly
-    	if ($line =~ /<\/up>/){print "FormatTagRemoved:   $line"; $line =~ s/<\/up>//g;print "NEW:   $line\n\n"}
-    	if ($line =~ /<down>/){print "FormatTagRemoved:   $line"; $line =~ s/<down>//g;print "NEW:   $line\n\n"} # as above, but subscript tags
-    	if ($line =~ /<\/down>/){print "FormatTagRemoved:   $line"; $line =~ s/<\/down>//g;print "NEW:   $line\n\n"}
-    	
-    	while ($line =~ /(.*?)<([\d\w])>(.*)/){   # get rid of invalid XML which existed in early versions of GO ontology
-    		print "BadXML:  $line";               # they seem to use angle brackets instead of normal brackets in some cases, resulting in unmatched tags
-    		$line = $1 . "($2)" . $3;
-    		print "NEW:     $line\n\n"
-    	}
-    	print OUT $line;                          # print the cleaned up line to the temp fie
-    }
-    close IN;
-    close OUT;
- 	
-    $filename = "$GoPath" . "tmpGOfile.remove_me";
-
-    my $ref = $xs->XMLin($filename);              # XMLin throws an error if this file is not available.
-    my $GO;  # this variable holds the pruned and self-referencing hash of GO terms
-
-    foreach my $key(keys(%{$ref->{"go:term"}})){
-    	#print "working on key $key\n";
-    	my $relation;
-    	my $thisentry = $ref->{"go:term"}->{$key};
-    	if ($thisentry->{"go:isa"}){                    # terms at the moment have "isa" or "partof" subtags.
-    		$relation = "go:isa";
-    	} elsif ($thisentry->{"go:partof"}){
-    		$relation = "go:partof";
-    	} else {print "================================>> new GO term found $key\n"    # warn if there is a unknown tag
-    	}
-    	my ($def, $term);	
-    	my $assoc;  # hash that will contain the association data
-    	    	
-    	#get rid of downstream "junk"
-    	#if ($thisentry->{"go:association"}){delete $thisentry->{"go:association"}}     # all heavily detailed data is completely removed from the hash to save time and space
-    	    	
-    	if (ref $thisentry->{"go:definition"} eq "ARRAY"){
-    		$def = $thisentry->{"go:definition"}->[0]; #  I have no idea why this returns an array sometimes...???
-    		#print "$def\n";
-    	} else {
-    		$def = $thisentry->{"go:definition"};
-    		#print "$def\n";
-    	}
-    	$def = ($def)?$def:"No Definition Provided";
-    	$def =~ s/\s\s//g; $def =~ s/^\s//;$def =~ s/\s$//;  # remove leading/trailing extra spaces
-    	$def =~ s/\n//g;                     # remove newlines
-    	
-    	$term = $thisentry->{"go:name"};
-    	$term =~ s/\s\s//g; $term =~ s/^\s//;$term =~ s/\s$//;  # remove leading/trailing extra spaces
-    	$term =~ s/\n//g;                     # remove newlines
-											# fill in the details about the child
-    	$GO->{$key}->{"definition"} = $def; # each child is expected to have three reliable keys
-    	$GO->{$key}->{"term"} = $term;      # so create them now.
-    	$GO->{$key}->{"genes"} = [];        # (may not have any, so initialize an empty anon array)
-    	
-    	if ($thisentry->{"go:association"}){
-    		my @thisass;
-    		if (ref $thisentry->{"go:association"} eq "ARRAY"){
-    			@thisass = @{$thisentry->{"go:association"}};
-    		} else {
-    			push @thisass, $thisentry->{"go:association"};
-    		}
-    		my @genes;
-    		foreach my $ass(@thisass){
-    			push @{$GO->{$key}->{"genes"}}, $ass->{"go:gene_product"}->{"go:symbol"};	
-    			
-    		}
-    	}
-    	
-    	if (ref $thisentry->{$relation} eq "ARRAY"){    	# if there are multiple parents
-    		foreach my $elem(@{$thisentry->{$relation}}){  # for each parent
-    			my $parentkey = $elem->{"parent_id"};            # get the parent ID
-    			$GO->{$parentkey}->{$key} = $GO->{$key};          # write a ref to this child in the parent
-    	    }
-    	} else {                                                   # single parents
-    			my $parentkey = $thisentry->{$relation}->{"parent_id"}; # get the parent ID
-    			$GO->{$parentkey}->{$key} = $GO->{$key};                 # write a ref to the child in the parent
-    	}	
-
-    }
-    unlink $filename;   # delete the temporary file
-
-    #print "got to end\n";
-    #print "dumping data\n";
-
-    my $OUTfilename = "GO" . $type . ".gob";      # create a predictable filename
-    store \%{$GO}, "$GoPath" . "$OUTfilename";    # store in binary format
-	return $GO
-}
 
 1;
 
