@@ -28,7 +28,7 @@ the BioPerl feature itself, as well as the offset, and colour.
 
 In addition, SeqCanvasFeature has the ability to rip itself apart into its constituent
 transcripts and exons (if present).  Thus there are only two types of SCF's:  'Gene', and
-'Generic'.  "generic" features are alawys called by a simple ->_draw.  "Gene" features
+'Generic'.  "generic" features are alawys called by a simple -E<gt>_draw.  "Gene" features
 are pulled apart with sub-features created on-the-fly in this module, and then mapped onto
 both the finished and draft canvas.
 

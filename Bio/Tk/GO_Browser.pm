@@ -9,15 +9,15 @@ Bio::Tk::GO_Browser.pm - Browser of the GO ontology
  require GO::AppHandle;  # you must have the GO perl_api from BDGP
                          # contact Chris Mungall for details
                          # (cjm@fruitfly.bdgp.berkeley.edu)
- 
+
  &begin;
  MainLoop;
- 
+
  sub begin {
    my $mw = MainWindow->new; 
    my $frame = $mw->Frame->pack;
    my $GO = GO_Browser->new($frame);
- 
+
    my $Annotation;
 
    # note that Button-1 events must be bound with <<...>>, not <...> 

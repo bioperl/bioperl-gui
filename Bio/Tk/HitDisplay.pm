@@ -41,7 +41,7 @@ within it. The non-standard options for B<HitDisplay> are:
 
 =over
 
-=item B<-hitdata> => \@hitdata
+=item B<-hitdata> =E<gt> \@hitdata
 
 The structure of each element of this list is quite complex. They are
 normally generated from object(s) representing Blast or Fasta hits e.g.
@@ -91,10 +91,10 @@ again.
 The callback is a code reference which, if defined, will be bound to a
 left mouse button click on the subject id in the canvas window.
 
-=item B<-hitcolours> => \%colourhash
+=item B<-hitcolours> =E<gt> \%colourhash
 
 The hits or HSPs will be colour-coded according to percentage identity
-according to the key->value pairs in the colourhash. The default
+according to the key-E<gt>value pairs in the colourhash. The default
 values are:
 
           { 90 => 'red',
@@ -102,11 +102,11 @@ values are:
 	    60 => 'gold',
 	    40 => 'yellow' }
 
-This indicates that hits where the query is >= 90% identical to the
-subject will be red, >= 80% will be orange etc. The hash supplied to
+This indicates that hits where the query is E<gt>= 90% identical to the
+subject will be red, E<gt>= 80% will be orange etc. The hash supplied to
 B<-hitcolours> will override the defaults.
 
-=item B<-interval> => integer >= 10
+=item B<-interval> =E<gt> integer E<gt>= 10
 
 This defines the vertical spacing between hit lines on the canvas. The
 minimum (and default) value is 10.

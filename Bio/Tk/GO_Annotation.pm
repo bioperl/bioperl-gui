@@ -235,7 +235,7 @@ sub GO_id {
   Comments:  gets/sets the GO term  (eg. apoptosis)
 
 =cut
-	
+
 =head3 addEvidence
 
   Usage: $GO_Annotation->addEvidence($code, [\@refs]);
@@ -344,5 +344,5 @@ sub gff2_attributes {
 =cut
 
 sub DESTROY {}
-	
+
 1;

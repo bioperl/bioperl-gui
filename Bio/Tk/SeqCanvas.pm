@@ -17,14 +17,14 @@ Bio::Tk::SeqCanvas.pm - (v3.0) Graphical display of SeqI objects
  sub Begin {
 
  # set up the Tk Windows
-  	
+
  my $MW = MainWindow->new (-title => "Map Of BioSeq Object");
  my $Frame = $MW->Frame()->pack(-side => 'top');
  my $lblSysMess = $MW->Label()->pack(-side => 'bottom', -fill => 'both');
 
  # create a BioSeq object
  # (note:  the test file used below is in the /t/ folder) 	
-  	
+
  my $SIO = Bio::SeqIO->new(-file=> 'testseq.gb', -format => 'genbank');
  my $SeqObj = $SIO->next_seq();
 
@@ -201,15 +201,15 @@ GeneMarkHMM" not just "GeneMarkHMM")
 
 =head1 CODE EXAMPLES:  Adding/Binding Features
 
- SeqCanvas is a dynamic map, allowing features to be added or removed
- after the object has been created.  In addition, events occurring
- on this canvas can be externally bound and assigned to subroutines
- to allow the canvas to feed information out to an external program
- for further processing.
+SeqCanvas is a dynamic map, allowing features to be added or removed
+after the object has been created.  In addition, events occurring on
+this canvas can be externally bound and assigned to subroutines to
+allow the canvas to feed information out to an external program for
+further processing.
 
- Some code examples are below; these can be added into the Begin()
- subroutine in the synopsis to see how they work:
- 	
+Some code examples are below; these can be added into the Begin()
+subroutine in the synopsis to see how they work:
+
     # MAPPING SIMPLE GENERIC FEATURES
     #________________________________
     # make six arbitrary features and map them
@@ -690,7 +690,7 @@ sub AUTOLOAD {
 				$SeqObj,
 				-orientation => ['horizontal'|'vertical']
 				[, label => $tag])
-				
+
  Function : create a map from the Feature object provided
  Returns  : Handle to the Map object
  Args     :
@@ -2704,6 +2704,7 @@ sub getFeaturesWithTag {
 
 
 =cut
+
 sub clearSelections {
 	my $self = shift;
     $self->DraftCanvas->delete('selection_box');   #  we delete all reference to selected stuff on both maps
@@ -2980,18 +2981,19 @@ sub is_finished_feature {
 
 =head1 EVENTS
 
-The SeqCanvas both internally responds to mouse events, and sets "tags" on the mapped feature in response to mouse events
-such that the user can "trap" these events in the top-level windowing system and evaluate which mapped feature the user was
-manupulating.
+The SeqCanvas both internally responds to mouse events, and sets
+"tags" on the mapped feature in response to mouse events such that the
+user can "trap" these events in the top-level windowing system and
+evaluate which mapped feature the user was manupulating.
 
 =head2 Mouse-Click
 
-Clicking or shift-Clicking the left mouse button
-over a mapped feature causes the feature(s) to become "selected".
-A selected object is displayed on the screen with a black box surrounding
-the object, and the object becomes tagged with a testable tag "selected"
-(use the getSelectedFeatures or getSelectedIDs to retrieve additional information
-about this object)
+Clicking or shift-Clicking the left mouse button over a mapped feature
+causes the feature(s) to become "selected".  A selected object is
+displayed on the screen with a black box surrounding the object, and
+the object becomes tagged with a testable tag "selected" (use the
+getSelectedFeatures or getSelectedIDs to retrieve additional
+information about this object)
 
 =head2 Mouse-Double-Click
 
@@ -3001,16 +3003,18 @@ other features become unselected.
 
 =head2 Mouse-Click and Drag
 
-Used to select multiple objects. Any object touched by the bounding box will be included in the selection.
+Used to select multiple objects. Any object touched by the bounding
+box will be included in the selection.
 
 =head2 Mouse-Over
 
-As the mouse pointer enters the mapped widget, the tag "Mouse_over" is added to this object. information about this
-object could be retrieved by, for example, calling the getIDsWithTag(["Mouse_over"])
-method. This tag is removed when the mouse pointer leaves the mapped-feature
-space. Bind the <Movement> event in the top-level windowing
-system to track the mouse movements if you wish to monitor the Mouse-Over
-widget events.
+As the mouse pointer enters the mapped widget, the tag "Mouse_over" is
+added to this object. information about this object could be retrieved
+by, for example, calling the getIDsWithTag(["Mouse_over"])
+method. This tag is removed when the mouse pointer leaves the
+mapped-feature space. Bind the B<Movement> event in the top-level
+windowing system to track the mouse movements if you wish to monitor
+the Mouse-Over widget events.
 
 =cut
 
