@@ -25,13 +25,18 @@ consequential or incidental, arising from the use of the software.
  # To create a BioSeq map and return a handle to the map object:
 
  use Tk;
+ use Bio::SeqIO;
+ use SeqCanvas;
+ # you may need to have a "use lib" statement here if you are running
+ # from the cvs version of bioperl-gui.
+
  Begin();
  MainLoop;
 
  sub Begin {
 
 	# set up the Tk Windows
- 	   my $MW = MainWindow = MainWindow->new (-title => "Map Of BioSeq Object");
+ 	   my $MW = MainWindow->new (-title => "Map Of BioSeq Object");
  	   my $Frame = $MW->Frame()->pack(-side => 'top');
  	   my $lblSysMess = $MW->Label()->pack(-side => 'bottom', -fill => 'both');
 
@@ -43,13 +48,15 @@ consequential or incidental, arising from the use of the software.
 
  	# Draw the Map
 
- 	   $MapObj = SeqCanvas->new(
+ 	   $MapObj = Bio::Tk::SeqCanvas->new(
 			$axis_length,
 			$Frame,
 			$lblSysMess,
 			$SeqObj,
-			-orientation => 'vertical'
-			label => 'primary_id');
+			-orientation => 'horizontal',
+			label => 'primary_id',
+			AdditionalSources => ["test1", "test2", "test3"],
+			);
 
  	# SeqCanvas returns object reference for success
  	# returns -1 for failed initiation - no $SeqObj supplied
@@ -220,6 +227,7 @@ $Bio::Tk::SeqCanvas::VERSION='1.0';
 			#offsets =>	[undef,            'read/write'],  # the offset for each feature type; key = source, value = offset from axis
 			FinishedSources =>	[undef,            'read/write'],  # the list of genefinder sources to be mapped (one per row)
 			DraftSources =>	[undef,            'read/write'],  # the list of genefinder sources to be mapped (one per row)
+			AdditionalSources => [["EST", "cDNA", "other"], 		'read/write'],  # TAIR has requested the ability to arbitrarily define additional source_tags which do not, at initialization, exist in the Bio::Seq object.
 			colordefs =>	[\%colordef,        'read'],
             		colorlist => 	[\@colorlist, 		'read'],
             		zoom_triggers =>[{},			'read/write'],
@@ -370,8 +378,10 @@ sub AUTOLOAD {
 				$Frame,
 				[$lblSysMess | undef],
 				$SeqObj,
-				-orientation => ['horizontal'|'vertical']
-				[, label => $tag])
+				-orientation => ['horizontal'|'vertical'],
+				label => $tag,
+				AdditionalSources => ["source1", "source2", "source3"],
+				)
 				
  Function : create a map from the Feature object provided
  Returns  : Handle to the Map object
@@ -381,8 +391,10 @@ sub AUTOLOAD {
 	    a Tk::Label or undef,
 	    a BioSeqI compliant object,
 	    the orientation for the map,
-	    optionally the SeqFeature tag you wish to 
-               use as the label
+		optionally the SeqFeature tag you wish to
+			use as the label
+		optionally, a list of source-tags that you require
+			but do not yet exist in the Sequence object
 
 =cut
 
@@ -884,7 +896,7 @@ sub _prepareSeqFeatures {
     if ($TOP){$TOP->configure(-text => "Extracting Source tags"); $TOP->update}
 
     # this extracts the "source" tag from each feature,
-    push @Finishedsources, ("gene", _extract_sources(@features)); 
+    push @Finishedsources, ("gene", @{$self->AdditionalSources}, _extract_sources(@features));
 
     # Because of the way BioPerl parses genbank we filter out the
     # "gene" features in the _extract_sources routine because even
@@ -922,10 +934,11 @@ sub _prepareSeqFeatures {
     @features = $self->MapSeq->all_SeqFeatures;	
     my @Draftsources;
     # we need an additional class "hand-annotation" to deal with modified exons
-    push @Draftsources, ("EST", _extract_sources(@features), "hand_annotation",); 
+    push @Draftsources, (@{$self->AdditionalSources}, _extract_sources(@features), "hand_annotation",);
     # so we don't bugger-up primary data
-    # and another class EST to deal with features that are not really part of the sequence 
-    # we are displaying.
+    # at the request of TAIR we have added the AdditionalSources, which provides a space for adding features with source-tags that
+    # were not present in the initializing Sequence object.  good idea guys!
+
     if ($TOP){$TOP->configure(-text => "Assigning Colors to sub-level Sources"); $TOP->update}
     _assign_colors($self, @Draftsources); # assign colors to each
     if ($TOP){$TOP->configure(-text => "Assigning Offsets to sub-level Sources"); $TOP->update}
@@ -988,7 +1001,7 @@ sub _drawSubFeatures {
 sub _recurse_subFeatures {
     my $feature=shift;
     return unless $feature;
-    return (_recurse_subFeatures($feature->sub_SeqFeatures),  #recursively search through sub_SeqFeatures
+    return (_recurse_subFeatures($feature->sub_SeqFeature),  #recursively search through sub_SeqFeatures
 	    $feature->sub_SeqFeature                          #add this level list of sub_SeqFeatures
 	   );
 }
