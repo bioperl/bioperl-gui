@@ -1144,12 +1144,12 @@ sub _receiveDropOnWidget {
 		else {$strand = $feature->strand} # get strand information from the current feature while we are at it			
 	}	
 
-	foreach my $feature(values %features){  # sanity check - have to be featues of a certain type
+	foreach my $feature(values %features){  # sanity check - have to be featues of a certain BioPerl implementing type
 		next unless $feature;
-		unless ($feature->isa($self->BioPerlFeatureTypes->{Exon}) ||
-				$feature->isa($self->BioPerlFeatureTypes->{Poly_A_site}) ||
-				$feature->isa($self->BioPerlFeatureTypes->{Promoter}) ||
-				$feature->isa($self->BioPerlFeatureTypes->{UTR})
+		unless ($feature->isa("Bio::SeqFeature::Gene::ExonI") ||
+				$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
+				$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
+				$feature->isa("Bio::SeqFeature::Gene::UTR")
 			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again"; return}
 	}
 
@@ -1179,10 +1179,10 @@ sub _receiveDropOnWidget {
 		
 		foreach my $feature(values %features){
 			next unless $feature;
-			if ($feature->isa($self->BioPerlFeatureTypes->{Exon})){$Trans->add_exon($feature)}
-			if ($feature->isa($self->BioPerlFeatureTypes->{Poly_A_site})){$Trans->poly_A_site($feature)}
-			if ($feature->isa($self->BioPerlFeatureTypes->{Promoter})){$Trans->add_promoter($feature)}
-			if ($feature->isa($self->BioPerlFeatureTypes->{UTR})){$Trans->add_utr($feature)}			
+			if ($feature->isa("Bio::SeqFeature::Gene::ExonI")){$Trans->add_exon($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
 		}
 			
 		$self->unmapFeatures([$Gene->FID]);
