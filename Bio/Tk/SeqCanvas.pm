@@ -1725,14 +1725,17 @@ sub _extract_sources {
 
 sub _getAllSubFeatures {
 	my ($self, $feature) = @_;
-	my @all_features;
-	push @all_features, $feature;
+	my %all_features;
+	$all_features{"$feature"} = $feature;  # need a non-redundant list
 	if ($feature->sub_SeqFeature){
 		foreach my $sub($feature->sub_SeqFeature){
-			push @all_features, $self->_getAllSubFeatures($sub);
+			foreach my $ssub($self->_getAllSubFeatures($sub)){
+				$all_features{"$ssub"} = $ssub;
+			}
+			$all_features{"$sub"} = $sub;
 		}
 	}	
-	return @all_features;
+	return (values %all_features);
 }
 
 
