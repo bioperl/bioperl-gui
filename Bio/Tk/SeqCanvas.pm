@@ -409,7 +409,8 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
 						"UTR"			=> "Bio::SeqFeature::Gene::UTR",
 						"Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
 											},					'read/write'],
-					Menu				=>  [undef, 			'read/write'],
+					Menu				=>  [undef, 			'read/write'], # the menu that contains "Re-Cast Selected As", to allow additions from outside of the module
+					ReCastMenu			=>	[undef, 			'read/write'], # the menu that is cascaded by selecting Re-CastSelected As" to allow re-configuration of callbacks from outside if you are not using generic BioPerl feature objects
 					Colors				=>	[{},				'read/write'],  # the colors associated with each source  $Colors{$source} = "color"; Class property
                     colordefs 			=>	[\%colordef,    	'read/write'],
                     colorlist 			=> 	[\@colorlist,		'read/write'],
@@ -924,6 +925,7 @@ sub _addMenus {
         );
 	}
 	$self->Menu($menu);
+	$self->ReCastMenu($f);
 
     $canvas->Tk::bind ("<Button-3>" => sub {$self->Menu->Popup(-popover => 'cursor',
 						        -popanchor => 'nw'); });
