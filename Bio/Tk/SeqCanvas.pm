@@ -732,19 +732,12 @@ sub new {
     #Create Object
     my $self = bless {}, $class;
 
-    if ($args{-orientation}) {
-		unless ($self->ori){   # orientation may only be set *once*, then it is fixed in that orientation
-			# need to set teh AnnotMap arguments list (-orientation) and the SeqCanvas ori value
-			# to 
-			if ($args{-orientation} =~ /h/i) {$self->{-orientation} = "horizontal"; $self->ori("horizontal")}
-			elsif ($args{-orientation} =~ /v/i) {$self->{-orientation} = "vertical"; $self->ori("vertical")}
-			else {return -4}
-		} else{
-			$self->{-orientation} = $self->ori;  # no matter what is sent in the params, it will be ignored if a cznvas already exists
-		}
-    }
+   	if ($args{-orientation} =~ /h/i) {$self->{-orientation} = "horizontal"; $self->ori("horizontal")}
+   	elsif ($args{-orientation} =~ /v/i) {$self->{-orientation} = "vertical"; $self->ori("vertical")}
+   	else {return -4}
 
 	delete $args{-orientation};
+	
     foreach (keys %args) {
         foreach my $attrname ( $self->_standard_keys ) {
 		next if $attrname eq "-orientation";
@@ -789,14 +782,10 @@ sub new {
     my $map_width;
 
 	# remember, $self->dxa/dya are *class* variables, not instance varaibles!
-	if ($self->dya || $self->dxa){  # if a previous map exists, then we need to copy its dimensions
-		$map_width =($self->{-orientation} eq "horizontal")?($map_width = 2*($self->dyb)):($map_width = 2*($self->dxb));
-		# this looks strange, but see coment below about how AnnotMap percieves its axis location
-	} else {
-		$map_width = $self->width;  # otherwise, just use the default width
-	}
+	$map_width = (2* ($self->whitespace + ($self->draft_offset_pointer*$self->def_offset)));
+	if ($map_width < 100){$map_width = 100}
 	
-
+	
     if ($self->{-orientation} eq "horizontal") {
 		# the SeqText widget breaks MS-Windows, and is of questionable value anyway...
 		# I have removed it, but if you are running *nix and create only horizontal
@@ -807,13 +796,15 @@ sub new {
 		#$self->SeqText->insert('end', "\n");
 		#$self->SeqText->insert('end', $SeqObj->seq);
     
-		unless ($self->dya){$self->dya(-$map_width/2)} # each map is equally distributed
-		unless ($self->fya){$self->fya(-$map_width/2)} # each map is equally distributed
-		unless ($self->dyb){$self->dyb($map_width/2)}  # around the zero axis
-		unless ($self->fyb){$self->fyb($map_width/2)}  # around the zero axis
+		$self->dya(-$map_width/2); # each map is equally distributed
+		$self->fya(-$map_width/2); # each map is equally distributed
+		$self->dyb($map_width/2); # around the zero axis
+		$self->fyb($map_width/2);  # around the zero axis
 		$self->{-axis_loc} = $map_width/2; # axis goes half-way (this is a strange bug in AnnotMap... even if you specify that the map is -100 to +100, you can't set the axis at 0, you have to set it at +100 to put it in the middle of this 200 range....
-		unless ($self->dxb){$self->dxb($window_length)} # height is unchanged
-		unless ($self->fxb){$self->fxb($window_length)} # height is unchanged
+		$self->dxa(1);
+		$self->fxa(1);
+		$self->dxb($window_length);# height is unchanged
+		$self->fxb($window_length);# height is unchanged
 
 		my $DLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);	# frame for Draft map and labels
 		my $FLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);	# frame for Finished map and labels
@@ -843,13 +834,15 @@ sub new {
 
     } else {			# vertical
     	
-		unless ($self->dxa){$self->dxa(-$map_width/2)} # each map is equally distributed
-		unless ($self->fxa){$self->fxa(-$map_width/2)} # each map is equally distributed
-		unless ($self->dxb){$self->dxb($map_width/2)}  # around the zero axis
-		unless ($self->fxb){$self->fxb($map_width/2)}  # around the zero axis
+		$self->dxa(-$map_width/2); # each map is equally distributed
+		$self->fxa(-$map_width/2); # each map is equally distributed
+		$self->dxb($map_width/2);  # around the zero axis
+		$self->fxb($map_width/2);  # around the zero axis
 		$self->{-axis_loc} = $map_width/2; # axis goes half-way (this is a strange bug in AnnotMap... even if you specify that the map is -100 to +100, you can't set the axis at 0, you have to set it at +100 to put it in the middle of this 200 range....
-		unless ($self->dyb){$self->dyb($window_length)} # height is unchanged
-		unless ($self->fyb){$self->fyb($window_length)} # height is unchanged
+		$self->dya(1);
+		$self->fya(1);
+		$self->dyb($window_length);# height is unchanged
+		$self->fyb($window_length);# height is unchanged
 
 		my $DLF = $self->MapFrame->Frame->pack(-side => 'left', -fill => 'both'); # frame for Draft map and labels
 		my $FLF = $self->MapFrame->Frame->pack(-side => 'left', -fill => 'both'); # frame for Finished map and labels
