@@ -2272,6 +2272,7 @@ sub _mapOntoDraft {
 
 sub deleteFeatures {
     my ($self, $FeatureIDs) = @_;
+    return unless $self->MapSeq->isa('Bio::UpdateableSeqI');
     foreach my $FeatureID (@$FeatureIDs){
     	my $SCF = $self->AllFeatures($FeatureID); 		# get the SCF (SeqCanvasFeature) object
 	next unless $SCF;
