@@ -195,7 +195,7 @@ $Bio::Tk::SeqCanvas::VERSION='0.01';
             	  	xb  		=>  [0,         	'read/write'],
             	  	yb  		=>  [0,         	'read/write'],
                   	-axis_loc  	=>  [0,           'read/write'],	
-			-labelfont 	=> 	['Courier 10 normal',		'read/write'],
+			-labelfont 	=> 	['TimesNewRoman 10 normal',		'read/write'],
 			-range		=>  [undef,			'read/write'],
 			label		=>  [undef, 		'read/write'],       # if this is defined then this is the Feature tag used to write labels on mapped objects
 			ScrollBar   =>  [undef, 		'read/write'],
@@ -987,7 +987,7 @@ sub _drawLabels {
 										-fill => $color,
 										-width => $text_width,
 										#-justify => 'right',
-										-font => "Arial 10 normal",
+										-font => "Courier 10 normal",
 										-anchor => 'nw',
 										
 										);
@@ -996,7 +996,7 @@ sub _drawLabels {
 										 -fill => $color,
 										 -width => $text_width,
 										 #-justify => 'right',
-										 -font => "Arial 10 normal",
+										 -font => "Courier 10 normal",
 										 -anchor => 'nw',
 										
 										);
@@ -1051,10 +1051,10 @@ sub _selectFeature {    # the upshot of this is to identify and box any widgets 
     	if ($tag eq "selected"){       # this object has already been selected! so... unselect it
     		$canvas->delete("sel_box_$FeatureID");	# delete the selection box from around this object only
     		$canvas->dtag($FeatureID, "selected");  # remove the "selected" status of this widget
+    		$canvas->dtag('now_current');
     		$exitflag = "true";                     # raise the flag to exit this routine
     	}
     }
-
     return if ($exitflag eq "true");                # get out if the event was a de-selection event
 
     $FeatureID =~ /^FID(.+)/;
@@ -1118,6 +1118,16 @@ sub _extractTags {
 	}
 		#print "tags were $FeatureID, $strand, $source\n\n";
 	 return ($FeatureID, $strand, $source);
+}
+
+sub _isLabel {
+	my ($self, $widgetTkID) = @_;
+	my @tags = $self->DraftCanvas->gettags($widgetTkID);
+	push @tags, $self->FinishedCanvas->gettags($widgetTkID);
+	foreach my $tag(@tags){
+		if ($tag eq "bioTk_Map_Label"){return 1}
+	}
+	return 0;
 }
 
 
@@ -1444,8 +1454,8 @@ sub getFeaturesWithTag{
         	my $FeatureIndex = $1;                                       # extract the digit portion of this, which is a pointer to the feature list
         	my $feature = ${$self->IndexedFeatureList}[$FeatureIndex];   # extract this Bio::Feature object from the list
         	$FeatureHash{$FeatureID} = $feature;                         # assign it in a $hash{FIDxxx} = $FeatureObject
-         }
-     }	# end of foreach $whichtag
+         }                                                               # N.B. because of the hash structure we don't need to worry about this feature/label duplication
+     }	# end of foreach $whichtag                                       # that arose in getIDsWithTag, as it simply overwrites them.
      return \%FeatureHash;                                           # return the hash
 }
 
@@ -1512,7 +1522,7 @@ sub selectWithTag {
 	my $self = shift @_;
 	my @tags = @{shift @_};
 	my $whichmap = shift @_;
-	return if (!@tags);
+	return if ($#tags == -1);
 	
 	foreach my $tag(@tags) {
 		if (defined $whichmap && $whichmap eq 'finished'){
@@ -1525,17 +1535,21 @@ sub selectWithTag {
 		elsif (defined $whichmap && $whichmap eq 'draft'){
     		my @widgets = $self->DraftCanvas->find("withtag", $tag);
     		foreach my $widget(@widgets){
-    			$self->DraftCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
-    			_selectFeature ($self, $self->DraftCanvas, $self->DraftMap, 'multi'); 	# call the routine in multi-mode
+    			if (! $self->_isLabel($widget)){
+        			$self->DraftCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
+        			_selectFeature ($self, $self->DraftCanvas, $self->DraftMap, 'multi'); 	# call the routine in multi-mode
+				}
     		}
 		} else {
     		my @widgets = $self->FinishedCanvas->find("withtag", $tag);
     		push @widgets, $self->DraftCanvas->find("withtag", $tag);
     		foreach my $widget(@widgets){
-    			$self->FinishedCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
-    			_selectFeature ($self, $self->FinishedCanvas, $self->FinishedMap, 'multi'); 	# call the routine in multi-mode
-    			$self->DraftCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
-    			_selectFeature ($self, $self->DraftCanvas, $self->DraftMap, 'multi'); 	# call the routine in multi-mode
+    			if (! $self->_isLabel($widget)){
+        			$self->FinishedCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
+        			_selectFeature ($self, $self->FinishedCanvas, $self->FinishedMap, 'multi'); 	# call the routine in multi-mode
+        			$self->DraftCanvas->addtag('now_current', 'withtag', $widget);    		# the _selectFeature routine looks for widgets that are 'now_current' and boxes them
+        			_selectFeature ($self, $self->DraftCanvas, $self->DraftMap, 'multi'); 	# call the routine in multi-mode
+    			}
     		}
 		}   	
 	}

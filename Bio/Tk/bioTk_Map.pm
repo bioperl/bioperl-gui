@@ -713,7 +713,7 @@ sub MapObject  {
 	    if ($hit)  {
 		my @newobjects;
 		#  pushed out the int because of Tcl/Perl division diffs...
-		$maxi = int(abs($canvas_min-$canvas_max)/$step);
+		$maxi = int(abs($canvas_min-$canvas_max)/$step);                #/
 		$i = 0;
 		@newobjects = ();
 		foreach $w (@$MapObjects)  {
@@ -767,7 +767,7 @@ sub MapObjectLabel  {
     $x1 = $x1+2;
     #print "x0 = $x0 = $c_start, x1 = $x1 = $c_end\n";
     #print "y0 = $y0 = $c_edge1, y1 = $y1 = $c_edge2\n";
-
+    push @{$tags}, "bioTk_Map_Label";
     @data = ('-text'=>$label, '-font'=>$font, '-fill'=>$color, '-tags'=>$tags);
     if ($anchor eq 'n')  {
         return $canvas->create('text', ($x0+$x1)/2, $y0, '-anchor' => 's',    #/
