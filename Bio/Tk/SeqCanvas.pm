@@ -58,12 +58,12 @@ whatever is contained in the BioSeq object provided.  The maps re-size
 on the fly to accomodate newly added features.
 
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca),
-Plant Biotechnology Institute, National Research Council of Canada.
+David Block (dblock@gnf.org)
+
 Copyright (c) National Research Council of Canada, June, 2001.
-Coding of zooming routines by David Block.
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -399,15 +399,16 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     FinishedLabelCanvas	=>	[undef,				'read/write'],
                     InitialFinishedLabels=> [['gene'], 			'read/write'],
                     InitialSources		=>  [['hand_annotation'],		'read/write'],
-                    BioPerlFeatureTypes	=>  [{"Gene" 		=> "Bio::SeqFeature::Gene::GeneStructure",
-					      "Transcript"	=> "Bio::SeqFeature::Gene::Transcript",
-					      "Exon" 		=> "Bio::SeqFeature::Gene::Exon",
-					      "Intron"		=> "Bio::SeqFeature::Gene::Intron",
-					      "Promoter"	=> "Bio::SeqFeature::Gene::Promoter",
-					      "Poly_A_site"	=> "Bio::SeqFeature::Gene::Poly_A_site",
-					      "UTR"			=> "Bio::SeqFeature::Gene::UTR",
-					      "Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
-					     },					'read/write'],
+                    BioPerlFeatureTypes	=>  [{
+						"Gene" 			=> "Bio::SeqFeature::Gene::GeneStructure",
+						"Transcript"	=> "Bio::SeqFeature::Gene::Transcript",
+						"Exon" 			=> "Bio::SeqFeature::Gene::Exon",
+						"Intron"		=> "Bio::SeqFeature::Gene::Intron",
+						"Promoter"		=> "Bio::SeqFeature::Gene::Promoter",
+						"Poly_A_site"	=> "Bio::SeqFeature::Gene::Poly_A_site",
+						"UTR"			=> "Bio::SeqFeature::Gene::UTR",
+						"Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
+											},					'read/write'],
 					Menu				=>  [undef, 			'read/write'],
 					Colors				=>	[{},				'read/write'],  # the colors associated with each source  $Colors{$source} = "color"; Class property
                     colordefs 			=>	[\%colordef,    	'read/write'],
