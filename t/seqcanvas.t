@@ -1,7 +1,6 @@
 #! /usr/bin/perl -w
 eval {
     use Tk;
-    use lib '/home/dblock/work/bioperl/bioperl-live';
     use Bio::SeqIO;
     use lib '..';
     use Bio::Tk::SeqCanvas;

@@ -1752,7 +1752,7 @@ sub assignCustomColors {
 				   my $color = $_[1];
 				   $self->current_colors->{$source} = $color;
 				   #print "new color for $source is " ,
-				          $self->current_colors->{$source} . "\n";
+				   #       $self->current_colors->{$source} . "\n";
 				   $self->recolorWithTag('default', 'draft', ["Source $source"]);
 				   $self->recolorWithTag('default', 'finished', ["Source $source"]);
 				   $cedit->destroy;
