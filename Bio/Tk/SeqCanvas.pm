@@ -43,7 +43,7 @@ consequential or incidental, arising from the use of the software.
 
  	# Draw the Map
 
- 	   $MapObj = DrawableBioSequence->new(
+ 	   $MapObj = SeqCanvas->new(
 			$axis_length,
 			$Frame,
 			$lblSysMess,
@@ -167,7 +167,7 @@ $Bio::Tk::SeqCanvas::VERSION='1.0';
 
 {
 	#Encapsulated class data
-#Encapsulated class data for a DrawableSequence
+#Encapsulated class data for a SeqCanvas
 	my %colordef = (
 		magenta => '#ee00ee',
 		fuschia => '#ff00cc',
@@ -444,7 +444,7 @@ sub new {
 
     # assign some additional values required by the Canvas and AnnotMap
     # ***************** TEMPORARY HACK
-    # this should be changed later to make DrawableSequence a real Sequence object
+    # this should be changed later to make SeqCanvas a real Sequence object
     $self->MapSeq($SeqObj);  
     # *******************************
     # - This line ensures that the sequences fills the allocated space.
