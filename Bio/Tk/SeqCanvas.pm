@@ -1133,23 +1133,20 @@ sub _receiveDropOnWidget {
 	my ($FID) = _extractTags(\@tags);  # FeatureID is contained in the tags, and can be parsed out
 	my $SCF = $self->AllFeatures($FID);  # then get this feature id from the list
 
+	if ($self->DropHighlighted){
+			$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
+			$self->DropHighlighted(undef);   # and set it to no longer be highlighted
+	}
+
 	my %features = %{$self->getSelectedFeatures};
 	my $start = 0; my $stop = 0; my $strand;  # get the dimensions of the new transcript
 	foreach my $feature(values %features){  # get boundary information and ensure they are all on the same strand.
-#		next unless $feature;
-#		unless ($feature->end < $stop){$stop = $feature->end}
-#		unless ($start){$start = $feature->start}
-#		if ($start < $feature->start){$start = $feature->start}
 		if ($strand && ($strand ne $feature->strand)){
 			$self->DraftCanvas->Dialog(
 					-title => "cross-strand",
 					-text => "transcript will cross strands - ignored",
 					-default_button => "OK",
 					-buttons => ["OK"])->Show(-global);
-			if ($self->DropHighlighted){
-					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
-					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
-			}
 			return 0
 		}
 
@@ -1167,10 +1164,6 @@ sub _receiveDropOnWidget {
 					-text => "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast non-compliant features and drop again",
 					-default_button => "OK",
 					-buttons => ["OK"])->Show(-global);
-				if ($self->DropHighlighted){
-					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
-					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
-				}
 			return
 			}
 	}
@@ -1179,8 +1172,6 @@ sub _receiveDropOnWidget {
 	    my $Gene = $SCF->Feature;
 	    $self->unmapFeatures([$SCF->FID]);
 	    $Gene->add_transcript_as_features(values %features);
-		
-		$self->DropHighlighted(undef);
 		return $self->mapFeatures(undef, [$Gene]);
 	}
 	else{  # in this case we have dropped on something other than a gene-type widget.  This will either be a transcript or a transcript part...
@@ -1202,10 +1193,6 @@ sub _receiveDropOnWidget {
 					-text => "transcript will cross strands - ignored",
 					-default_button => "OK",
 					-buttons => ["OK"])->Show(-global);
-				if ($self->DropHighlighted){
-					$self->recolorWithTag("default", "finished", [$self->DropHighlighted]);  # set anything highlighted back to default color
-					$self->DropHighlighted(undef);   # and set it to no longer be highlighted
-				}
 				return 0}
 		}	
 		
@@ -1219,7 +1206,6 @@ sub _receiveDropOnWidget {
 			
 		$self->unmapFeatures([$Gene->FID]);
 		
-		$self->DropHighlighted(undef);
 		return $self->mapFeatures(undef, [$Gene->Feature]);
 		
 	}	
