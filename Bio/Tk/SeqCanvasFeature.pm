@@ -18,14 +18,21 @@ consequential or incidental, arising from the use of the software.
 
 =head2 SYNOPSIS
 
-Should not be used (and really has no use) outside of SeqCanvas, so it is better
-to just let SeqCanvas play with this one
+Should not be used (and really has no use) outside of SeqCanvas.
+
 
 =head2 DESCRIPTION and ACKNOWLEDGEMENTS
 
-SeqCanvasFeature's are containers for BioPerl Feature objects.  Additional data
-and methods are packed in along with the feature object which allows SeqCanvas
-to give the Feature a bit of 'self awareness' when it is mapped.
+Essentially, SeqCanvasFeatures encapsulate all the things
+that SeqCanvas needs to know about a feature in order to map it.  This includes both
+the BioPerl feature itself, as well as the offset, and colour.
+
+In addition, SeqCanvasFeature has the ability to rip itself apart into its constituent
+transcripts and exons (if present).  Thus there are only two types of SCF's:  'Gene', and
+'Generic'.  "generic" features are alawys called by a simple ->_draw.  "Gene" features
+are pulled apart with sub-features created on-the-fly in this module, and then mapped onto
+both the finished and draft canvas.
+
 
 =head2 CONTACT
 
@@ -262,46 +269,46 @@ sub _drawThyselfOnFinished {
 
 
 sub _draw {
-    my ($self) = @_;
- 	my $map = $self->map;
+	my ($self) = @_;
+	my $map = $self->map;
 	my $canvas = $self->canvas;
 	my $offset = $self->offset;
 	my $FID = $self->FID;
 	my $color = $self->color;
 	my $label;
 	if ($self->has_tag($self->label)){
-    	($label) = ($self->label)?$self->each_tag_value($self->label):undef;  # set the label if it is required and present
-    } else {
-    	$label = undef
-    }
-    my $start = $self->start;
+		($label) = ($self->label)?$self->each_tag_value($self->label):undef;  # set the label if it is required and present
+	} else {
+		$label = undef
+	}
+	my $start = $self->start;
 	my $end = $self->end;
 	my $strand = $self->strand;
-    my @tags = $self->_parse_feature_info;
-   	my @coords; my $widget;
-   	
-   	if ($strand =~ /\-/) {
-   		push @coords, [$end, $start];
-   		if (!$label){         # if no labels, or if this feature doesn't have the label then map without labelling
-   			$widget = $map->MapObject(\@coords, '-ataxis' => $offset,
-   							'-color' => $color, '-tags' => \@tags);
-   		} else {
-   			$widget = $map->MapObject(\@coords, '-ataxis' => $offset, '-label' => $label, '-labelcolor' => $color,
-   							'-color' => $color, '-tags' => \@tags);
-   		}
-    	   		
-   	} else {
-   		push @coords, [$start, $end];
-   		if (!$label){
-   			$widget = $map->MapObject(\@coords, '-ataxis' => -$offset,
-   							'-color' => $color, '-tags' => \@tags);
-   		} else {
-   			$widget = $map->MapObject(\@coords, '-ataxis' => -$offset, '-label' => $label, '-labelcolor' => $color,
-   							'-color' => $color, '-tags' => \@tags);
-   		}
-   	}
+	my @tags = $self->_parse_feature_info;
+	my @coords; my $widget;
+
+	if ($strand =~ /\-/) {
+		push @coords, [$end, $start];
+		if (!$label){         # if no labels, or if this feature doesn't have the label then map without labelling
+			$widget = $map->MapObject(\@coords, '-ataxis' => $offset,
+							'-color' => $color, '-tags' => \@tags);
+		} else {
+			$widget = $map->MapObject(\@coords, '-ataxis' => $offset, '-label' => $label, '-labelcolor' => $color,
+							'-color' => $color, '-tags' => \@tags);
+		}
+				
+	} else {
+		push @coords, [$start, $end];
+		if (!$label){
+			$widget = $map->MapObject(\@coords, '-ataxis' => -$offset,
+							'-color' => $color, '-tags' => \@tags);
+		} else {
+			$widget = $map->MapObject(\@coords, '-ataxis' => -$offset, '-label' => $label, '-labelcolor' => $color,
+							'-color' => $color, '-tags' => \@tags);
+		}
+	}
 	$self->widget($widget);	# dont forget to put a reference to the widget itself into the SCF		
-}
+	}
 			
 sub _parse_feature_info {
 	my ($self) = @_;

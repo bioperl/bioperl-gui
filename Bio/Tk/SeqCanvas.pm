@@ -63,6 +63,7 @@ on the fly to accomodate newly added features.
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca),
 Plant Biotechnology Institute, National Research Council of Canada.
 Copyright (c) National Research Council of Canada, June, 2001.
+Coding of zooming routines by David Block.
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -87,6 +88,22 @@ in any event for any damages, whether direct or indirect,
 consequential or incidental, arising from the use of the software.
 
 =head1 NEW FEATURES IN THIS VERSION
+
+=head2 Re-casting of SeqFeature types
+
+During editing you may map numerous features of the type SeqFeature::Generic
+or other non-GeneStructureI compliant feature type.  Since the Finished canvas
+accepts only GeneStructureI objects, it is now possible to "re-cast"
+features on the draft canvas into any of the GeneStructureI features types (Exon,
+Intron, UTR, PolyA, Promoter, NC_Feature).  This is accomplished by selecting the
+features you wish to be re-cast, right-mouse-clicking on the canvas, and selecting
+the new cast from the drop-down menu.  Internally a new object of the selected type is
+created from the GFF2 string of the original feature.  This is added to the Seq object,
+the original object is deleted from the Seq object, the old widget unmapped and the new
+widget mapped.  (Note: each widget has a unique WidgetID, but may point to the same
+underlying feature.  Thus in the case of multiple transcripts, the same SeqFeature object
+may be represented by multiple Widgets with unique WidgetID's)
+
 
 =head2 Live Sequence Object Editing and Retrieval
 
@@ -349,69 +366,71 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
 	
 	#___________________________________________________________
 	#ATTRIBUTES
-    my %_attr_data = #     				DEFAULT    	ACCESSIBILITY
+    my %_attr_data = #     					DEFAULT    			ACCESSIBILITY
                   (	
-                    dxa					=>  [0,           	'read/write'],  # x/y coords of the draft (d) and finished (f) canvases
-                    dya  				=>  [0,           	'read/write'],
-                    dxb  				=>  [0,         	'read/write'],
-                    dyb  				=>  [0,         	'read/write'],
-                    fxa					=>  [0,           	'read/write'],
-                    fya  				=>  [0,           	'read/write'],
-                    fxb  				=>  [0,         	'read/write'],
-                    fyb  				=>  [0,         	'read/write'],
-                    -axis_loc  			=>  [0,           'read/write'],	
+                    dxa					=>  [0,           		'read/write'],  # x/y coords of the draft (d) and finished (f) canvases
+                    dya  				=>  [0,           		'read/write'],
+                    dxb  				=>  [0,         		'read/write'],
+                    dyb  				=>  [0,         		'read/write'],
+                    fxa					=>  [0,           		'read/write'],
+                    fya  				=>  [0,           		'read/write'],
+                    fxb  				=>  [0,         		'read/write'],
+                    fyb  				=>  [0,         		'read/write'],
+                    -axis_loc  			=>  [0,           		'read/write'],	
                     -labelfont 			=> 	['TimesNewRoman 9 normal',		'read/write'],
-                    -range				=>  [undef,			'read/write'],
-                    label				=>  [undef, 		'read/write'],  # if this is defined then this is the Feature tag used to write labels on mapped objects
-                    ScrollBar   		=>  [undef, 		'read/write'],
-                    ZoomBar     		=>  [undef, 		'read/write'],
-                    FinishedMap			=> 	[undef,			'read/write'],
-                    DraftMap 			=> 	[undef,			'read/write'],
-                    MapSeq				=>	[undef,			'read/write'],
-                    MapFrame			=>	[undef,			'read/write'],
-                    SeqFrame			=>  [undef, 		'read/write'],  # the frame to hold the sequence display
+                    -range				=>  [undef,				'read/write'],
+                    label				=>  [undef, 			'read/write'],  # if this is defined then this is the Feature tag used to write labels on mapped objects
+                    ScrollBar   		=>  [undef, 			'read/write'],
+                    ZoomBar     		=>  [undef, 			'read/write'],
+                    FinishedMap			=> 	[undef,				'read/write'],
+                    DraftMap 			=> 	[undef,				'read/write'],
+                    MapSeq				=>	[undef,				'read/write'],
+                    MapFrame			=>	[undef,				'read/write'],
+                    SeqFrame			=>  [undef, 			'read/write'],  # the frame to hold the sequence display
                     #SeqText				=>  [undef, 		'read/write'],  # the sequence display text box
-                    ZoomFrame			=>	[undef,			'read/write'],
-                    ScrollFrame 		=>  [undef, 		'read/write'],
-                    DraftCanvas			=>	[undef,			'read/write'],
-                    FinishedCanvas		=>	[undef,			'read/write'],
-                    AnnotTextFrame  	=>  [undef, 		'read/write'],  # as below
-                    AnnotTextCanvas 	=>  [undef, 		'read/write'],	# this is not used directly in SeqCanvas, but can be used by external routines to generate a third frame containing textual information beside the annotatinos (a la AceDB)
-                    AnnotTextMap    	=>  [undef, 		'read/write'],  # as above
-                    DraftLabelCanvas	=>	[undef,			'read/write'],
-                    FinishedLabelCanvas	=>	[undef,			'read/write'],
-                    InitialFinishedLabels=> [['gene'], 		'read/write'],
+                    ZoomFrame			=>	[undef,				'read/write'],
+                    ScrollFrame 		=>  [undef, 			'read/write'],
+                    DraftCanvas			=>	[undef,				'read/write'],
+                    FinishedCanvas		=>	[undef,				'read/write'],
+                    AnnotTextFrame  	=>  [undef, 			'read/write'],  # as below
+                    AnnotTextCanvas 	=>  [undef, 			'read/write'],	# this is not used directly in SeqCanvas, but can be used by external routines to generate a third frame containing textual information beside the annotatinos (a la AceDB)
+                    AnnotTextMap    	=>  [undef, 			'read/write'],  # as above
+                    DraftLabelCanvas	=>	[undef,				'read/write'],
+                    FinishedLabelCanvas	=>	[undef,				'read/write'],
+                    InitialFinishedLabels=> [['gene'], 			'read/write'],
                     InitialSources		=>  [['hand_annotation'],		'read/write'],
-                    Colors				=>	[{},			'read/write'],  # the colors associated with each source  $Colors{$source} = "color"; Class property
-                    colordefs 			=>	[\%colordef,    'read/write'],
-                    colorlist 			=> 	[\@colorlist,	'read/write'],
-                    current_offsets		=>	[{}, 			'read/write'],
+                    BioPerlFeatureTypes	=>  [["Exon", "Intron", "Promoter", "PolyA", "UTR", "Non-Coding"],		'read'],
+					Menu				=>  [undef, 			'read/write'],
+					Colors				=>	[{},				'read/write'],  # the colors associated with each source  $Colors{$source} = "color"; Class property
+                    colordefs 			=>	[\%colordef,    	'read/write'],
+                    colorlist 			=> 	[\@colorlist,		'read/write'],
+                    current_offsets		=>	[{}, 				'read/write'],
                     zoom_triggers 		=>	[{},				'read/write'],
-                    min_zoom	 		=>	[1,				'read/write'],
-                    max_zoom	 		=>	[2,				'read/write'],
-                    zoom_ratio 			=>	[1,				'read/write'],
-                    zoom_level 			=>	[0,				'read/write'],
-                    current_loc 		=>	[1,				'read/write'],
-                    finished_total_offset=>	[undef,			'read/write'],   # the largest offset for the finished map
-                    draft_total_offset 	=>	[undef,			'read/write'],   # the largest offset for the draft map
-                    width				=>	[200,			'read/write'],   # the "width" (perpendicular to the axis) of the maps at the outset
-                    -orientation 		=>  ['horizontal',	'read/write'],
-                    whitespace 			=>	[10, 			'read'],         # whitespace is the distance between the axis and the first widget; the default never changes
+                    min_zoom	 		=>	[1,					'read/write'],
+                    max_zoom	 		=>	[2,					'read/write'],
+                    zoom_ratio 			=>	[1,					'read/write'],
+                    zoom_level 			=>	[0,					'read/write'],
+                    current_loc 		=>	[1,					'read/write'],
+                    finished_total_offset=>	[undef,				'read/write'],   # the largest offset for the finished map
+                    draft_total_offset 	=>	[undef,				'read/write'],   # the largest offset for the draft map
+                    width				=>	[200,				'read/write'],   # the "width" (perpendicular to the axis) of the maps at the outset
+                    -orientation 		=>  ['horizontal',		'read/write'],
+                    whitespace 			=>	[10, 				'read'],         # whitespace is the distance between the axis and the first widget; the default never changes
                     SysMess 			=>	[undef, 			'read/write'],   # this is an (optional) handle back out to a label on the top level window to send system messages
                     dragx1  			=>	[undef, 			'read/write'],
                     dragy1  			=>	[undef, 			'read/write'],
                     dragx2  			=>	[undef, 			'read/write'],
                     dragy2  			=>	[undef, 			'read/write'],
-                    def_offset			=>	[10, 			'read/write'],
-                    DropHighlighted	=>  [undef, 		'read/write'], # this gets set during a drag-n-drop motion event, it holds the FID of a currently mouse-drag-over feature
+                    def_offset			=>	[10, 				'read/write'],
+                    _activeDelete		=>	["off",				'read/write'], # does pressing the delete key delete the selected features?
+                    DropHighlighted		=>  [undef, 			'read/write'], # this gets set during a drag-n-drop motion event, it holds the FID of a currently mouse-drag-over feature
 
                     );
 
-	#my $_nextid;
 	my $_nextDoffset;
     my $_nextFoffset;
-    #my %offsets;     # note that these are encapsulated CLASS properties
-    my %colors;      # and thus are constant from one instantiation to the next
+					# note that these are encapsulated CLASS properties
+    my %colors;		# and thus are constant from one instantiation to the next
     my $_color_pos = 0;
     my @FinishedSourceLabels;
     my @Sources;
@@ -686,8 +705,6 @@ sub new {
     # - This line ensures that the sequences fills the allocated space.
     $self->{-range} = [0, ($SeqObj->length)];   	
 
-    if (!($self->width)){$self->width(300)}
-
     # within these routines the features are counted and assigned
     # colors and offsets from the map axis.  the width of each is
     # thus double (plus strand and minus strand) the largest axis
@@ -698,16 +715,14 @@ sub new {
 
     # Create the MapCanvases with correct dimensions
 
-    # to make things clearer in the next routine here we figure
-    # out which of the two maps is the "wider" and make the
-    # default width for both maps equal to this value the "width"
-    # of a map depends on how many rows of different features are
-    # displayed - i.e. its total offset
-
-    my $map_width = ($self->width);	#/
+	my $map_width = ($self->width);
 
     if ($self->{-orientation} eq "horizontal") {
 		# the SeqText widget breaks MS-Windows, and is of questionable value anyway...
+		# I have removed it, but if you are running *nix and create only horizontal
+		# maps you are free to uncomment these lines, as well as the reference in the
+		# initializing hash at the top of the code and any other lines that
+		# make reference to ->SeqText to make it appear again.
 		#$self->SeqText($self->SeqFrame->Scrolled("Text", -scrollbars => "s", -height => 3, -background => 'black', -foreground => "white", -wrap => 'none')->pack(-expand => 1, -fill => 'both')); # text box for teh sequence
 		#$self->SeqText->insert('end', "\n");
 		#$self->SeqText->insert('end', $SeqObj->seq);
@@ -788,8 +803,9 @@ sub new {
 
     $self->DraftCanvas->Tk::bind('<Enter>', sub { $self->DraftCanvas->Tk::focus; } ); # set focus on the appropriate map when mouse enters
     $self->FinishedCanvas->Tk::bind('<Enter>', sub { $self->FinishedCanvas->Tk::focus; } ); # the space
-    $self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub { print "delete\n";$self->_deleteFeatures} );
-    # and now create the maps
+    if ($self->_activeDelete eq "on"){$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} )}
+    if ($self->_activeDelete eq "on"){$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} )};
+	# and now create the maps
     $self->FinishedMap($self->FinishedCanvas->AnnotMap($self->fxa, $self->fya, $self->fxb, $self->fyb, $self->MapArgs));
     $self->DraftMap($self->DraftCanvas->AnnotMap($self->dxa, $self->dya, $self->dxb, $self->dyb, $self->MapArgs));
 
@@ -849,23 +865,106 @@ sub new {
 	$a =~ /(\d+)x(\d+)\+-?(\d+)\+-?(\d+)/;      #get current screen position of top-level window eg. 500x300+20+-45
 	$toplevel->geometry("$1"."x"."$2+10+10");  # set it so that the control bar is entirely visible at the top of the screen
 
-	# return the object handle
+	$self->_addMenus;
+
+	# return the object handle	
     return $self;
 }
 
-sub _deleteFeatures {
-	# only features on the finished canvas can be deleted.  Simply delete the feature object from $AllFeatures
-	# and un-map it (and it's subfeatures)
-	
-	my ($self) = @_;
-	my %featurehash = %{$self->getSelectedFeatures};
-	my @Ffeatures;
-	foreach my $FID(keys %featurehash){
-		if ($self->is_finished_feature($FID)){   # get all finished features from the list
-			push @Ffeatures, $FID;
-		}
+=head2 activeDelete
+
+
+ Title    : activeDelete
+ Usage    : $MapObj->activeDelete("on" | "off")
+ Function : enable/disable 'delete' key to delete mapped features (default off)
+ Returns  : 
+ Args     : "on" | "off" (case sensitive)
+
+
+=cut
+
+
+
+sub activeDelete {
+	my ($self, $onoff) = @_;
+	$self->_activeDelete($onoff);
+    if ($self->_activeDelete eq "on"){
+		$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} );
+	}else {
+		$self->DraftCanvas->Tk::bind("<KeyPress-Delete>", sub {} );
 	}
-	#  method ends here as there is	
+    if ($self->_activeDelete eq "on"){
+		$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {$self->unmapFeatures([(keys %{$self->getSelectedFeatures})])} );
+	}else {
+		$self->FinishedCanvas->Tk::bind("<KeyPress-Delete>", sub {} );
+	}
+}
+
+sub _addMenus {
+	my ($self) = @_;
+	my $canvas = $self->DraftCanvas;
+	my $menu = $canvas->Menu(-type => 'normal');
+
+	my $f = $menu->cascade(-label => '~Re-Cast Selected As', -tearoff => 0);
+    
+    foreach my $type (@{$self->BioPerlFeatureTypes()}) {
+		$f->command(
+             -label => "$type",
+             -underline => 14,
+	         -command => sub {$self->reCastAs($type);},
+        );
+	}
+    $canvas->Tk::bind ("<Button-3>" => sub {$menu->Popup(-popover => 'cursor',
+						        -popanchor => 'nw'); });
+	$self->Menu($menu);
+
+}
+
+sub reCastAs {
+	my ($self, $type) = @_;
+	my $cast;
+	if ($type eq "Exon"){$cast = "Bio::SeqFeature::Gene::Exon"}
+	if ($type eq "Intron"){$cast = "Bio::SeqFeature::Gene::Intron"}
+	if ($type eq "PolyA"){$cast = "Bio::SeqFeature::Gene::Poly_A_site"}
+	if ($type eq "Promoter"){$cast = "Bio::SeqFeature::Gene::Promoter"}
+	if ($type eq "UTR"){$cast = "Bio::SeqFeature::Gene::UTR"}
+	if ($type eq "Non-Coding"){$cast = "Bio::SeqFeature::Gene::NC_Feature"}
+	
+	my %FeatureHash = %{$self->getSelectedFeatures};
+	my $newfeature; my @del_list; my @add_list;
+	foreach my $FID (keys %FeatureHash){
+		my $feature = $FeatureHash{$FID};
+		$newfeature = $cast->new();  # make a new object of that type
+		$newfeature->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
+		push @del_list, $feature;
+		push @add_list, $newfeature;
+	}		
+	$self->unmapFeatures([(keys %FeatureHash)]);
+	$self->mapFeatures("draft", \@add_list);
+		
+}	
+
+sub _deleteFeatureFromSeqObject {
+	# called by unmapFeatures *exclusively*
+	# send this a feature and it will remove it from the seq object
+	# if it is represented on the map only once
+	# returns 0 if the feature was not deleted, 1 if it was.
+	
+	my ($self, $delfeature) = @_;
+	my $Seq = $self->MapSeq;
+	my @features = (values %{$self->getFeaturesWithTag(["Canvas draft"])});
+	push @features, (values %{$self->getFeaturesWithTag(["Canvas finished"])});
+	# now we have a list of all features, check if the feature is a singleton, and if so, delete it
+
+	return 0 if (scalar (grep {$_ eq $delfeature} @features) > 1);  # it is represented more than once on the map, so don't destroy it!
+	# okay, here we have to 
+	@features = $Seq->all_SeqFeatures;
+	$Seq->flush_SeqFeatures;
+	foreach my $feature(@features){
+		next if ($feature eq $delfeature);  # filter out the ones we don't want
+		$Seq->add_SeqFeature($feature);
+	}
+	return 1;
 }
 
 sub _setupDrag_n_Drop {
@@ -1034,6 +1133,14 @@ sub _receiveDropOnWidget {
 		else {$strand = $feature->strand} # get strand information from the current feature while we are at it			
 	}	
 
+	foreach my $feature(values %features){  # sanity check - have to be featues of a certain type
+		next unless $feature;
+		unless ($feature->isa("Bio::SeqFeature::Gene::Exon") ||
+				$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
+				$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
+				$feature->isa("Bio::SeqFeature::Gene::UTR")
+			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast features and drop again"; return}
+	}
 
 	if ($SCF->Feature->can('transcripts')){  # it has been dropped on a Gene-type widget, therefore we want to make a new transcript from it
 		my $Gene = $SCF->Feature;
@@ -1041,17 +1148,20 @@ sub _receiveDropOnWidget {
 		
 		foreach my $feature(values %features){
 			next unless $feature;
-			my @tags = $feature->all_tags;
-			my %taghash;
-			foreach my $tag(@tags){
-				my @values = $feature->each_tag_value($tag);
-				$taghash{$tag} = $values[0];
-			}
-			my $exon = Bio::SeqFeature::Gene::Exon->new();  # make an exon object
-			$exon->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
+			#my @tags = $feature->all_tags;
+			#my %taghash;
+			#foreach my $tag(@tags){
+			#	my @values = $feature->each_tag_value($tag);
+			#	$taghash{$tag} = $values[0];
+			#}
+			# my $exon = Bio::SeqFeature::Gene::Exon->new();  # make an exon object
+			# $exon->_from_gff_string($feature->gff_string);	# and fill it with the information from the existing feature::Generic
 
-				#-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%
-			$Trans->add_exon($exon)
+			#-start => $feature->start, -end => $feature->end, -source => $feature->source_tag, -primary => "exon", -strand => $feature->strand, -frame => $feature->frame, -score => $feature->score, -tag => \%
+			if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}
 		}
 		
 		$Gene->add_transcript($Trans);
@@ -1070,18 +1180,18 @@ sub _receiveDropOnWidget {
 			$Trans = $SCF->parent_transcript;	# get the parent transcript
 			$Gene = $SCF->parent_gene;  		# get the SCF gene object
 		} else {warn "invalid drop-recipient object"; return 0}
+
+		foreach my $feature(values %features){  # ensure they are all on the same strand.
+			next unless $feature;
+			if ($feature->strand ne $Trans->strand){warn "transcript will cross strands - ignored!"; return 0}
+		}	
 		
 		foreach my $feature(values %features){
 			next unless $feature;
-			next unless $feature->isa("Bio::SeqFeatureI");
-			my $exon;
-			unless ($feature->isa("Bio::SeqFeature::Gene::ExonI")){
-				$exon=Bio::SeqFeature::Gene::Exon->new; # create a new exon object
-				$exon->_from_gff_string($feature->gff_string); # and fill it with the info fromm the current Feature::Generic
-			} else {
-				$exon = $feature;  # if it is already ExonI compliant, then just useit.
-			}
-			$Trans->add_exon($exon);  # add it to the transcript
+			if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+			if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
 		}
 			
 		$self->unmapFeatures([$Gene->FID]);
@@ -1106,19 +1216,23 @@ sub _recevieDropCreateNewGene {
 		if ($strand && ($strand ne $feature->strand)){warn "transcript will cross strands - ignored!"; return 0}
 		else {$strand = $feature->strand}			
 	}	
+	foreach my $feature(values %features){  # sanity check - have to be featues of a certain type
+		next unless $feature;
+		unless ($feature->isa("Bio::SeqFeature::Gene::Exon") ||
+				$feature->isa("Bio::SeqFeature::Gene::Poly_A_site") ||
+				$feature->isa("Bio::SeqFeature::Gene::Promoter") ||
+				$feature->isa("Bio::SeqFeature::Gene::UTR")
+			){print "features must be of type Exon, Poly_A_site, Promotor, or UTR.  Please re-cast features and drop again"; return}
+	}
+
 	my $Gene = Bio::SeqFeature::Gene::GeneStructure->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");  	
 	my $Trans = Bio::SeqFeature::Gene::Transcript->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");
 	foreach my $feature(values %features){
 		next unless $feature;
-		next unless $feature->isa("Bio::SeqFeatureI");
-		my $exon;
-		unless ($feature->isa("Bio::SeqFeature::Gene::ExonI")){
-			$exon=Bio::SeqFeature::Gene::Exon->new; # create a new exon object
-			$exon->_from_gff_string($feature->gff_string); # and fill it with the info fromm the current Feature::Generic
-		} else {
-			$exon = $feature;  # if it is already ExonI compliant, then just useit.
-		}
-		$Trans->add_exon($exon); # add it to the transcript
+		if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
+		if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
+		if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
+		if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
 	}
 	$Gene->add_transcript($Trans);
 	$self->MapSeq->add_SeqFeature($Gene);
@@ -2166,26 +2280,34 @@ sub unmapFeatures {
     my @FeatureIDs = @{$FeatureIDs};
     my (@unmappedFeatures);
     if ($#FeatureIDs == -1) {return \@unmappedFeatures};
-
+		
+	$self->DraftCanvas->toplevel->Busy;
     $self->clearSelections;
     foreach my $FeatureID (@FeatureIDs){
-	
-    	$self->DraftCanvas->delete($FeatureID);       # delete the map widgets
-    	$self->FinishedCanvas->delete($FeatureID);
-    	my $SCF = $self->AllFeatures($FeatureID); # get the SCF (SeqCanvasFeature) object
-    	my $unmappedFeature = $SCF->Feature;	  # retrieve the BioPerl Feature object
-    	push @unmappedFeatures, $unmappedFeature;    # and extract the BioPerl Feature object from it to send back to the caller
-		$self->AllFeatures($FeatureID, undef);    # delete the SCF from the encapsulated hash
-    	
-    	foreach my $subfeature($self->_getAllSubFeatures($unmappedFeature)){   # now get any and all subfeatures and unmap them
+    	my $SCF = $self->AllFeatures($FeatureID); 		# get the SCF (SeqCanvasFeature) object
+		my $unmappedFeature = $SCF->Feature;	  		# retrieve the BioPerl Feature object
+		foreach my $subfeature($self->_getAllSubFeatures($unmappedFeature)){   # now get any and all subfeatures and unmap them
     		my $SCF = $self->translateFeatureIntoSCF($subfeature);  # we need the FID to delete it, so retrieve the SCF for that feature
     		next unless $SCF;
-    		$self->DraftCanvas->delete($SCF->FID);     # delete the widgets by their ID
+			# now we want to delete it, but only if it is represented only once!	
+			# This subroutine only deletes them if they are represented by a single canvas widget
+			# thus it is possible to unmap e.g. an exon in a transcript without removing that exon
+			# from the underlying Sequence object if it is also represented in a second transcript
+			$self->_deleteFeatureFromSeqObject($subfeature); # get rid of the reference in the Seq object
+			$self->DraftCanvas->delete($SCF->FID);     # delete the widgets by their ID
     		$self->FinishedCanvas->delete($SCF->FID);
     		push @unmappedFeatures, $SCF->Feature;# get the feature
     		$self->AllFeatures($SCF->FID, undef);	  # and remove it from the feature list
-		}
+		}	
+    	$self->DraftCanvas->delete($FeatureID);         # delete the map widget, where
+    	$self->FinishedCanvas->delete($FeatureID);		# it might be on either canvas...
+    	my $SCF = $self->AllFeatures($FeatureID); 		# get the SCF (SeqCanvasFeature) object
+		$self->_deleteFeatureFromSeqObject($unmappedFeature);
+		push @unmappedFeatures, $unmappedFeature;    # and extract the BioPerl Feature object from it to send back to the caller
+		$self->AllFeatures($FeatureID, undef);    # delete the SCF from the encapsulated hash
 	}
+	$self->DraftCanvas->toplevel->Unbusy;
+		
     return \@unmappedFeatures
 }
 
@@ -2650,6 +2772,17 @@ sub is_finished_feature {
     return $result;
 }	
 
+
+
+=head2 Menu
+
+ Title    : Menu
+ Usage    : $menu = $MapObj->Menu()
+ Function : Allow editing of the drop-down menu
+ Returns  : returns a reference to the drop-down menu object (right-click)
+ Args     : 
+
+=cut
 
 
 =head1 EVENTS
