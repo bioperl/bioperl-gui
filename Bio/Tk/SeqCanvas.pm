@@ -399,7 +399,13 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     FinishedLabelCanvas	=>	[undef,				'read/write'],
                     InitialFinishedLabels=> [['gene'], 			'read/write'],
                     InitialSources		=>  [['hand_annotation'],		'read/write'],
-                    BioPerlFeatureTypes	=>  [["Exon", "Intron", "Promoter", "PolyA", "UTR", "Non-Coding"],		'read'],
+                    BioPerlFeatureTypes	=>  [{"Exon" 		=> "Bio::SeqFeature::Gene::Exon",
+											  "Intron"		=> "Bio::SeqFeature::Gene::Intron",
+											  "Promoter"	=> "Bio::SeqFeature::Gene::Promoter",
+											  "PolyA"		=> "Bio::SeqFeature::Gene::Poly_A_site",
+											  "UTR"			=> "Bio::SeqFeature::Gene::UTR",
+											  "Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
+											 },					'read/write'],
 					Menu				=>  [undef, 			'read/write'],
 					Colors				=>	[{},				'read/write'],  # the colors associated with each source  $Colors{$source} = "color"; Class property
                     colordefs 			=>	[\%colordef,    	'read/write'],
@@ -907,29 +913,22 @@ sub _addMenus {
 
 	my $f = $menu->cascade(-label => '~Re-Cast Selected As', -tearoff => 0);
     
-    foreach my $type (@{$self->BioPerlFeatureTypes()}) {
+    foreach my $type (keys %{$self->BioPerlFeatureTypes()}) {
 		$f->command(
              -label => "$type",
              -underline => 14,
-	         -command => sub {$self->reCastAs($type);},
+	         -command => sub {$self->reCastAs(${$self->BioPerlFeatureTypes}{$type});},
         );
 	}
-    $canvas->Tk::bind ("<Button-3>" => sub {$menu->Popup(-popover => 'cursor',
-						        -popanchor => 'nw'); });
 	$self->Menu($menu);
+
+    $canvas->Tk::bind ("<Button-3>" => sub {$self->Menu->Popup(-popover => 'cursor',
+						        -popanchor => 'nw'); });
 
 }
 
 sub reCastAs {
-	my ($self, $type) = @_;
-	my $cast;
-	if ($type eq "Exon"){$cast = "Bio::SeqFeature::Gene::Exon"}
-	if ($type eq "Intron"){$cast = "Bio::SeqFeature::Gene::Intron"}
-	if ($type eq "PolyA"){$cast = "Bio::SeqFeature::Gene::Poly_A_site"}
-	if ($type eq "Promoter"){$cast = "Bio::SeqFeature::Gene::Promoter"}
-	if ($type eq "UTR"){$cast = "Bio::SeqFeature::Gene::UTR"}
-	if ($type eq "Non-Coding"){$cast = "Bio::SeqFeature::Gene::NC_Feature"}
-	
+	my ($self, $cast) = @_;
 	my %FeatureHash = %{$self->getSelectedFeatures};
 	my $newfeature; my @del_list; my @add_list;
 	foreach my $FID (keys %FeatureHash){
@@ -2235,6 +2234,7 @@ sub _mapOntoDraft {
     	next if ($feature->primary_tag eq "gene_span");	# these are apparently redundant to the tag "gene"
     	next if ($feature->primary_tag eq "CDS");
     	next if ($feature->primary_tag eq "gene");
+		next if ($feature->primary_tag eq "mRNA");
     	next if ($feature->can("transcripts"));   # don't map genes (::Gene::GeneStructureI compliant objects)
     	next if ($feature->can("exons"));         # don't map transcripts (::Gene::TranscriptI compliant objects)
 	########  END OF FILTER  ##############
