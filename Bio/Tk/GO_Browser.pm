@@ -356,7 +356,7 @@ sub new {
 	# returns the database type and hostname (eg:  mysql sin.lbl.gov)
 	unless ($self->host){	
 		my $ua = new LWP::UserAgent;
-		my $req = new HTTP::Request GET => 'http://www.fruitfly.org/annot/go/database/server.cfg';
+		my $req = new HTTP::Request GET => 'http://www.godatabase.org/dev/database/server.cfg';
         #$req->content('match=www&errors=0');
 		my $res = $ua->request($req);
 
