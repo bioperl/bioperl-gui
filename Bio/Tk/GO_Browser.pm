@@ -107,7 +107,6 @@ use Tk;
 use Tk::Text;
 use Carp;
 use DBI;
-use Bio::Tk::GO_Annotation;
 
 use vars qw($AUTOLOAD);
 
