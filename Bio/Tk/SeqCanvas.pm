@@ -1230,8 +1230,9 @@ sub _receiveDropCreateNewGene {
 	}
 
 	my $Gene = $self->BioPerlFeatureTypes->{Gene}->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");  	
-	$retval=$self->MapSeq->add_SeqFeature($Gene);
-	if ($retval->isa($self->BioPerlFeatureTypes->{Gene})) {
+	my $retval=$self->MapSeq->add_SeqFeature($Gene);
+	
+	if (($retval ne "1") && ($retval->isa($self->BioPerlFeatureTypes->{Gene}))) {
 	    $Gene=$retval;
 	}
 	$Gene->add_transcript_as_features(values %features);
@@ -1968,16 +1969,7 @@ sub _selectFeature {
     	$index1 = "2." . ($start-1);                 # convert seq coordinates into text-coordinates
     	$index2 = "2." . ($stop);
     }
-    my $color = $self->current_colors->{$source};
-
-    # removed to accomodate MS Windows OS's
-    #if ($self->{-orientation} eq "horizontal"){
-    #	if ($SorM eq "single"){$self->SeqText->tagDelete("currently_selected", "currently_selected")}   # remove existing tags
-    #	$self->SeqText->tagAdd("currently_selected", $index1, $index2); # add the tag to the new region
-    #	$self->SeqText->tagConfigure("currently_selected", -foreground => $color);  # recolor it to the correct color
-    #	$self->SeqText->see($index1);  # bring it into view
-    #}
-    	
+    
 }
 
 sub _drawSelectionBox {		# this is conceptually based on Nomi Harris' Genotator code
@@ -2071,7 +2063,6 @@ sub mapFeatures {
 	# i.e. every freakin' thing get's mapped, but there is a filter to get rid of gene-level objects (and CDS spans and such)
 	foreach my $feature(@{$features}){
 		next unless $feature;
-
 		# calls to mapFeatures which take place after initial creation
 		# of the object may be mapping features which do not yet exist
 		# on the sequence object.  In this case, they need to be added
@@ -2242,7 +2233,7 @@ sub _mapOntoDraft {
     	next if ($feature->can("transcripts"));   # don't map genes (::Gene::GeneStructureI compliant objects)
     	next if ($feature->can("exons"));         # don't map transcripts (::Gene::TranscriptI compliant objects)
 	########  END OF FILTER  ##############
-		
+		#print "mapping onto draft ",$feature->id, " start ",$feature->start,"\n";
     	# create a SeqCanvasFeature object - acts, looks, and smells like a FeatureI object, with a bit of extra knowledge about itself	
 		my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $self,
 													Feature => $feature,  # this fills all of the FeatureI methods
