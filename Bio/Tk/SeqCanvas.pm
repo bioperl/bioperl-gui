@@ -1043,8 +1043,20 @@ sub _selectFeature {    # the upshot of this is to identify and box any widgets 
 
     my @tags = $canvas->gettags('current');    			# get the other tags for the currently selected widget
     push @tags, ($canvas->gettags('now_current'));      # one or the other of these will return undef under normal circumstances
-    		
+
     my ($FeatureID, $strand, $source) = _extractTags(\@tags);   # parse the tags to get the juicy bits
+
+    my $exitflag = "false";
+    foreach my $tag (@tags){
+    	if ($tag eq "selected"){       # this object has already been selected! so... unselect it
+    		$canvas->delete("sel_box_$FeatureID");	# delete the selection box from around this object only
+    		$canvas->dtag($FeatureID, "selected");  # remove the "selected" status of this widget
+    		$exitflag = "true";                     # raise the flag to exit this routine
+    	}
+    }
+
+    return if ($exitflag eq "true");                # get out if the event was a de-selection event
+
     $FeatureID =~ /^FID(.+)/;
     my $FeatureIndex = $1;                                       # get the IndexedFeatureList index pointer for this feature
     if (!(defined $FeatureIndex)){$canvas->dtag('now_current'); return};   # there are all sorts of other invisible junks on the map for some reason, so filter out these things
@@ -1058,9 +1070,9 @@ sub _selectFeature {    # the upshot of this is to identify and box any widgets 
 	$self->current_loc($current_loc);				# this becomes the location on the map around which we will zoom if the user choses
 
     if ($strand eq "-1") {
-		_drawSelectionBox ($self, $canvas, $map, $start, $stop, $offset, $SorM)
+		_drawSelectionBox ($self, $canvas, $map, $start, $stop, $offset, $FeatureID, $SorM)
     } else {
-		_drawSelectionBox ($self, $canvas, $map, $start, $stop, -$offset, $SorM)
+		_drawSelectionBox ($self, $canvas, $map, $start, $stop, -$offset, $FeatureID, $SorM)
     }
 	$canvas->addtag("selected", "withtag", "$FeatureID");
 	
@@ -1070,7 +1082,7 @@ sub _selectFeature {    # the upshot of this is to identify and box any widgets 
 }
 
 sub _drawSelectionBox {    # this is conceptually based on Nomi Harris' Genotator code
-     my($self, $canvas, $map, $start, $stop, $offset, $SorM) = @_;
+     my($self, $canvas, $map, $start, $stop, $offset, $FeatureID, $SorM) = @_;
      #print "start $start  end $end  offset $offset total offset $total_offset exon $ExonID  SM $SorM\n";
 
      my $y1 = (($self->actual_total_offset)/2) + $offset -3;      #/
@@ -1078,18 +1090,18 @@ sub _drawSelectionBox {    # this is conceptually based on Nomi Harris' Genotato
 
      if ((defined $SorM) && ($SorM eq "single")) {clearSelections($self)};          # if, for example, the user is not holding now the "shift" key when they click
                                                                                     # then clear all other selections/boxes
-
+     my @tags = ('selection_box', "sel_box_$FeatureID");
      if ($self->{-orientation} eq "vertical"){
      $canvas->create('rectangle',                          # draw a rectangle around the colored feature box widget
 					$y1, $map->MapLocation($start),
 					$y2, $map->MapLocation($stop),
-					'-tags' => 'selection_box',            # add a tag so that we can delete it later if necessary
+					'-tags' => \@tags,            # add a tag so that we can delete it later if necessary
 					);
      }else {
      $canvas->create('rectangle',                          # draw a rectangle around the colored feature box widget
 					$map->MapLocation($start), $y1,
 					$map->MapLocation($stop), $y2,
-					'-tags' => 'selection_box',            # add a tag so that we can delete it later if necessary
+					'-tags' => \@tags,            # add a tag so that we can delete it later if necessary
 					);
 	}
 }
@@ -1143,7 +1155,7 @@ sub mapFeatures {
 		next if ($feature->primary_tag eq "source");       # this just gives one BIIIG line representing the entire sequence
 		next if ($feature->primary_tag eq "CDS_span");     # these are on strand 0 so should be chucked (or?)
 		next if ($feature->primary_tag eq "intron");       # these are ugly to map
-		next if ($feature->primary_tag eq "gene_span");    # these are apparently redundant to the tag gene
+		next if ($feature->primary_tag eq "gene_span");    # these are apparently redundant to the tag "gene"
 		next if ($feature->primary_tag eq "CDS");
 		my @tags;
 
@@ -1236,7 +1248,7 @@ sub unmapFeatures {
     my ($self, $FeatureIDs) = @_;
     my @Features = @{$FeatureIDs};
     my (@unmappedFeatures);
-    if (@Features == 0) {return @unmappedFeatures};
+    if ($#Features == -1) {return @unmappedFeatures};
 
     $self->clearSelections;
     foreach my $Feature (@Features){
@@ -1255,7 +1267,7 @@ sub unmapFeatures {
 =head4 getSelectedIDs
 
 	Title : getSelectedIDs
-	Usage : $FeatureIDs = $MapObj->getSelectedTags
+	Usage : $FeatureIDs = $MapObj->getSelectedIDs
 	Function : to retrieve the FeatureID's of all currently selected mapped objects
 	Returns : reference to a list of FeatureID's
 	Args : none
@@ -1334,7 +1346,7 @@ sub getIDsWithTag {
 	my $Fcanvas = $self->FinishedCanvas;
 	my (@FeatureIDList, @selected);
 	
-	if (@whichtags == 0) {return @FeatureIDList};           # returns the empty list if no parameters were sent into the routine
+	if ($#whichtags == -1) {return \@FeatureIDList};           # returns the empty list if no parameters were sent into the routine
 
 	foreach my $whichtag(@whichtags){
     	#first check the Draft canvas for selected
@@ -1408,7 +1420,7 @@ sub getFeaturesWithTag{
 	my @whichtags = @{$whichtags};
 	
  	my (%FeatureHash, @selected);
-	if (@whichtags == 0){return \%FeatureHash};   # returns an empty hash if there were no parameters sent
+	if ($#whichtags == -1){return \%FeatureHash};   # returns an empty hash if there were no parameters sent
 	
 	foreach my $whichtag(@whichtags){	
     	my $Dcanvas = $self->DraftCanvas;
@@ -1473,7 +1485,7 @@ sub clearSelections {
 sub selectFeatures {
 	my $self = shift @_;
 	my @FeatureIDs = @{shift @_};
-	return if (@FeatureIDs == 0);
+	return if ($#FeatureIDs == -1);
 	
 	foreach my $FeatureID(@FeatureIDs) {
 		$self->DraftCanvas->addtag('now_current', 'withtag', $FeatureID);    		# the _selectFeature routine looks for widgets that are 'current' and boxes them
@@ -1548,7 +1560,7 @@ sub selectWithTag {
 sub recolorWithTag {
 	my ($self, $color, $whichmap, $tagsref) = @_;
 	my @tags = @{$tagsref};
-	return if (@tags == 0);
+	return if ($#tags == -1);
 	if ($whichmap eq 'draft'){
     	foreach my $tag(@tags) {
     		if ($color eq "default"){
