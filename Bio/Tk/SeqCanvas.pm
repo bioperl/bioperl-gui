@@ -913,19 +913,26 @@ sub activeDelete {
 sub _addMenus {
 	my ($self) = @_;
 	my $canvas = $self->DraftCanvas;
-	my $menu = $canvas->Menu(-type => 'normal');
-
-	my $f = $menu->cascade(-label => '~Re-Cast Selected As', -tearoff => 0);
+	my $menu = $canvas->Menu(-type => 'normal', -tearoff => 0);
+    my $cm = $menu->Menu(-type => 'normal', -tearoff => 0);
+	
     
     foreach my $type (keys %{$self->BioPerlFeatureTypes()}) {
-		$f->command(
-             -label => "$type",
-             -underline => 14,
-	         -command => sub {$self->reCastAs(${$self->BioPerlFeatureTypes}{$type});},
+		$cm->add(
+			'command',
+			-label => "$type",
+            -command => sub {$self->reCastAs(${$self->BioPerlFeatureTypes}{$type});},
         );
 	}
+
+	my $f = $menu->add(
+		'cascade',
+		-label => '~Re-Cast Selected As',
+		-menu => $cm
+		);
+    
 	$self->Menu($menu);
-	$self->ReCastMenu($f);
+	$self->ReCastMenu($cm);
 
     $canvas->Tk::bind ("<Button-3>" => sub {$self->Menu->Popup(-popover => 'cursor',
 						        -popanchor => 'nw'); });
@@ -2810,6 +2817,19 @@ sub is_finished_feature {
  Usage    : $menu = $MapObj->Menu()
  Function : Allow editing of the drop-down menu
  Returns  : returns a reference to the drop-down menu object (right-click)
+ Args     : 
+
+=cut
+
+
+=head2 ReCastMenu
+
+ Title    : ReCastMenu
+ Usage    : $menu = $MapObj->ReCastMenu()
+ Function : Allow editing of the cascadeing "reCast As" menu
+            Would be useful to re-define the callbacks associated
+            with a re-casting event.
+ Returns  : returns a reference to the menu object 
  Args     : 
 
 =cut
