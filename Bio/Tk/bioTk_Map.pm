@@ -136,6 +136,14 @@ sub new {
 	             "\"$orientation\" is not allowed\n";
 	return 0;
     }
+
+    $self->{virtual_axis} = $canvas_min + $axis_loc;  # MW this seems to make sense to record here
+    												  #	as it is more important to know the axis
+    												  # position relative to your map coordinate system
+    												  # than the canvas coordinate system.
+    												  # This allows you to resize the map post-creation
+    												  # without messing up your coordinate system
+
     if ($range)  { $map_start = $$range[0]; $map_end = $$range[1]; }
      else { $map_start = $canvas_start; $map_end = $canvas_end; }
     $map_range = $map_end - $map_start;
@@ -167,7 +175,7 @@ sub MapAxis  {
     my @args = @_;
     my $canvas = $self->{canvas};
     my($dir, $side, $axis, $lbl, $xt, $yt);
-    my($orientation, $linewidth, $color, $labelfont, $mapID, $axis_loc);
+    my($orientation, $linewidth, $color, $labelfont, $mapID, $axis_loc, $virt_axis_loc);
     my($map_start, $map_end, $canvas_start, $canvas_end, $scale_factor);
     my($i, $ticks, $units, $offset, $scale, $tags, @othertags, $alltags, $flip);
     $i = -1; $ticks = 0; $units = ''; $offset = 0; $scale = 1;
@@ -183,6 +191,7 @@ sub MapAxis  {
     $labelfont = $self->{labelfont};
     $mapID = $self->{mapID};
     $axis_loc = $self->{axis_loc};
+    $virt_axis_loc = $self->{virtual_axis};
 
 #    $map_start = $self->{map_start};
     $map_start = $self->{map_start} + $axis_start;
@@ -212,7 +221,8 @@ sub MapAxis  {
 		if ($canvas_start > $canvas_end)  { $dir = -1; $side = 'e'; }
 		else  { $dir = 1; $side = 'w'; }
 		
-		$offset = $self->{canvas_min} - $offset*$dir + $axis_loc;
+		#$offset = $self->{canvas_min} - $offset*$dir + $axis_loc;
+		 $offset = $virt_axis_loc - $offset*$dir;     # MW now we are mapping things relative to the virtual axis, instead of the canvas coordinate system
 		
 		if ($linewidth)  {
 	    $axis = $canvas->create('line', 
@@ -224,8 +234,10 @@ sub MapAxis  {
 		if ($canvas_start > $canvas_end)  { $dir = -1; $side = 'n'; }
 		else  { $dir = 1; $side = 's'; }
 	
-		$offset = $self->{canvas_min} - $offset*$dir + $axis_loc;
+		#$offset = $self->{canvas_min} - $offset*$dir + $axis_loc;
+		$offset = $virt_axis_loc - $offset*$dir;# MW now we are mapping things relative to the virtual axis, instead of the canvas coordinate system
 		
+		#print "offset $offset\n";
 		if ($linewidth)  {
 	    $axis = $canvas->create('line', 
 	        $canvas_start, $offset, $canvas_end, $offset,
@@ -291,7 +303,7 @@ sub MapObject  {
 	'ataxis', 'tags', 'just_labels');
 
     ### Instance variables that can't be overridden in the method call ###
-    my($mapID, $canvas, $orientation, $axis_loc, 
+    my($mapID, $canvas, $orientation, $axis_loc, $virt_axis_loc,
        $canvas_start, $canvas_end, $map_start, $map_end, $scale_factor, 
        $canvas_min, $canvas_max, $MapSpread, $MapObjects);
 
@@ -343,6 +355,7 @@ sub MapObject  {
     $canvas_end = $self->{canvas_end};
     $scale_factor = $self->{scale_factor};
     $axis_loc = $self->{axis_loc};
+    $virt_axis_loc = $self->{virtual_axis};
     $canvas_min = $self->{canvas_min};
     $canvas_max = $self->{canvas_max};
 
@@ -398,25 +411,36 @@ sub MapObject  {
 ##### Skipping options at the moment
 
    ##### Working out boundaries perpendicular to axis #####
+    print "axis loc: $axis_loc   virtual $virt_axis_loc   canvas_min $canvas_min  canvas_max $canvas_max   ataxis $ataxis \n";
     if (defined($at)) {
-	if (!(ref($at)))  { $canvas_min = $canvas_max = $at; }
-	elsif (ref($at) eq 'ARRAY')  {
-	    if ($#$at == 0)  { $canvas_max = $canvas_min = $$at[0]; }
-	    else { $canvas_min = $$at[0]; $canvas_max = $$at[1]; }
-	}
-	elsif ($at eq 'axis')  {  $canvas_min += $axis_loc; 
-				  $canvas_max = $canvas_min; }
+    	if (!(ref($at)))  { $canvas_min = $canvas_max = $at; }
+    	elsif (ref($at) eq 'ARRAY')  {
+    	    if ($#$at == 0)  { $canvas_max = $canvas_min = $$at[0]; }
+    	    else { $canvas_min = $$at[0]; $canvas_max = $$at[1]; }
+    	}
+    	elsif ($at eq 'axis')  {
+    				  # $canvas_min += $axis_loc;
+    				  $canvas_min = $virt_axis_loc; # MW now relative to map coords, not real coords
+    				  $canvas_max = $canvas_min; }
+    } elsif (defined($ataxis))  {
+    	if (ref($ataxis))  {
+    	    my $temp_min = $canvas_min;
+    	    #$canvas_min = $canvas_min + $axis_loc + $$ataxis[0];
+    	    $canvas_min = $virt_axis_loc + $$ataxis[0];   #MW relative coords
+    	    if ($#$ataxis == 0)  {
+    	    	$canvas_max = $canvas_min;
+    	    } else {
+    	    	#$canvas_max = $temp_min + $axis_loc + $$ataxis[1]; }
+    	    	$canvas_max = $virt_axis_loc + $$ataxis[1];  #MW relative coords
+    	    }
+    	}
+    	else  {
+    		 #$canvas_min = $canvas_min + $axis_loc + $ataxis;
+    		 $canvas_min = $virt_axis_loc + $ataxis;  #MW relative coords
+    		 $canvas_max = $canvas_min;
+    	}
     }
-    elsif (defined($ataxis))  {
-	if (ref($ataxis))  {
-	    my $temp_min = $canvas_min;
-	    $canvas_min = $canvas_min + $axis_loc + $$ataxis[0];
-	    if ($#$ataxis == 0)  { $canvas_max = $canvas_min;  } 
-	    else  { $canvas_max = $temp_min + $axis_loc + $$ataxis[1]; }
-	}
-	else  {  $canvas_min = $canvas_min + $axis_loc + $ataxis;
-		 $canvas_max = $canvas_min; }
-    }
+    #print "canvas min now $canvas_min\n";
     #  else no -at or -ataxis options, so $canvas_min and $canvas_max 
     #    stay as set in $self->{canvas_min} and $self->{canvas_max}
     if ($canvas_min < $canvas_max) {    
@@ -845,7 +869,7 @@ sub MapPosition  {
     $canvas_start = $self->{canvas_start};
     $scale_factor = $self->{scale_factor};
     return $map_start + ($canvas_coord - $canvas_start) / $scale_factor;
-}
+}  #/
 
 
 sub MapLocation {
@@ -912,7 +936,7 @@ sub MapBrokenLine  {
 sub MapTriangle  {
     my($self, $orientation, $c_start, $c_edge1, $c_end, $c_edge2,
        $color, $linewidth, $tags) = @_;
-    my $axis_mid = ($c_start + $c_end)/2;
+    my $axis_mid = ($c_start + $c_end)/2;      #/
     if ($orientation eq 'H')  {
 	$self->{canvas}->create('polygon', $c_start, $c_edge2, 
 				$axis_mid, $c_edge1, $c_end, $c_edge2,
@@ -950,7 +974,7 @@ sub MapOval  {
        $color, $linewidth, $tags) = @_;
     # adjust start and end if object is "too" small
     if (abs($c_start-$c_end) < 6)  { 
-	my $c_mid = ($c_start + $c_end) / 2;
+	my $c_mid = ($c_start + $c_end) / 2;         #/
 	$c_start = $c_mid - 3; $c_end = $c_mid + 3;
     }
     if ($orientation eq 'H')  {

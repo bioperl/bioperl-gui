@@ -33,6 +33,9 @@ sub Zoom  {
     my $self = shift;
     my $zoom_factor = shift;
     my $current_loc = shift;
+    my $neg_width = shift;
+    my $pos_width = shift;
+
     my($canvas, $mapID, $canvas_range, $scale_factor,
        $map_range);
     my($canvas_start, $diff_to_start); 
@@ -63,6 +66,10 @@ sub Zoom  {
     $self->{scale_factor} = $scale_factor;
     $self->{canvas_start} = $canvas_start;
     $self->{canvas_end} = $canvas_end;
+
+    #print "MIN " . $self->{canvas_min} . "\n";
+    #print "MAX " . $self->{canvas_max} . "\n\n";
+
     if ($self->{"orientation"} eq "V") {
     $canvas->configure('-scrollregion' =>
 		    [$self->{canvas_min}, $canvas_start,
