@@ -75,14 +75,10 @@ greatly enhance the functionality of this browser over the next couple of months
 send me any requests for additional 'toys' you would like to have in this module.
 
 
-=head1 AUTHORS
+=head1 AUTHOR
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
-Plant Biotechnology Institute, National Research Council of Canada.
 
- Version 1: Copyright (c) National Research Council of Canada, October, 2000.
- Version 2: Copyright (c) National Research Council of Canada, March, 2001.
- Version 3: Copyright (c) National Research Council of Canada, September, 2001.
 
 =head1 DISCLAIMER
 

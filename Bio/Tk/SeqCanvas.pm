@@ -63,7 +63,6 @@ on the fly to accomodate newly added features.
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca),
 David Block (dblock@gnf.org)
 
-Copyright (c) National Research Council of Canada, June, 2001.
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -783,7 +782,7 @@ sub new {
 
 	# remember, $self->dxa/dya are *class* variables, not instance varaibles!
 	$map_width = (2* ($self->whitespace + ($self->draft_offset_pointer*$self->def_offset)));
-	if ($map_width < 100){$map_width = 100}
+	if ($map_width < 200){$map_width = 200}
 	
 	
     if ($self->{-orientation} eq "horizontal") {
@@ -1341,9 +1340,10 @@ sub _bindMultiSelection {
     my ($self) = @_;
     # the line below converts the x/y coordinates of the event into the canvas coordinates
     $self->DraftCanvas->Tk::bind("<ButtonPress-1>" => 
-				 [ sub { shift;
-					$self->dragx1($self->DraftCanvas->canvasx(shift)); 
-					$self->dragy1($self->DraftCanvas->canvasy(shift))}, 
+				 [ sub { shift; my $x1 = shift; my $y1 = shift;
+						 #print "mouse event $x1\n";
+					$self->dragx1($self->DraftCanvas->canvasx($x1)); 
+					$self->dragy1($self->DraftCanvas->canvasy($y1))}, 
 				   Ev('x'), Ev('y')]);   
     $self->DraftCanvas->Tk::bind("<B1-Motion>" =>
 				 [sub {	$self->{rubberbanding} = "true";  # set a flag to distinguish between ruberbanding and drag/drop
@@ -1357,6 +1357,7 @@ sub _bindMultiSelection {
 					my $y2 = $self->DraftCanvas->canvasy($ty2);
                                         # delete existing boxse
 					return unless ($x1 && $x2 && $y1 && $y2);
+					
 					$self->DraftCanvas->delete("withtag", "multi_box");
 					$self->FinishedCanvas->delete("withtag", "multi_box"); #  "
                                         # create a new one
@@ -1377,6 +1378,7 @@ sub _bindMultiSelection {
 								   $self->dragx2, 
 								   $self->dragy1, $self->dragy2);
 					return unless ($x1 && $x2 && $y1 && $y2);
+					#print "SeqCanvas x1 $x1  y1 $y1  x2 $x2  y2 $y2\n";
 					if ($x1 > $x2){($x1, $x2) = ($x2, $x1)}
 					if ($y1 > $y2){($y1, $y2) = ($y2, $y1)}
 					if (($x2-$x1 < 10 )||($y2 - $y1 < 10)) { # set sensitivity

@@ -3,8 +3,6 @@
 =head2 AUTHORS
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
-Plant Biotechnology Institute, National Research Council of Canada.
-Copyright (c) National Research Council of Canada, April, 2001.
 
 =head2 DISCLAIMER
 
