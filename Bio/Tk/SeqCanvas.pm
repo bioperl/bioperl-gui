@@ -2281,11 +2281,13 @@ sub deleteFeatures {
 	if ($gene) {
 	    my $unmapped=$self->unmapFeatures([$geneobj->FID]);
 	    return unless $unmapped;
-	    $self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);
-	    $self->mapFeatures(undef,[$gene]);
+	    my $remapped=$self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);  #this needs to be implemented in Bio::Seq
+	    $self->mapFeatures(undef,[$gene]) if $gene->entire_seq;   #only remap if the gene still exists
+	    $self->mapFeatures(undef,$remapped);
 	} else {
 	    my $unmapped=$self->unmapFeatures([$FeatureID]);
-	    $self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);
+	    my $remapped=$self->MapSeq->delete_feature($SCF->Feature,$transcript,$gene);  #this needs to be implemented in Bio::Seq
+	    $self->mapFeatures(undef,$remapped);
 	}
     }
 }

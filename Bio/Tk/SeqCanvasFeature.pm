@@ -194,19 +194,19 @@ sub _drawThyselfOnFinished {
 	my $model = 0;		# ordinal number of transcript (needed for offset calculation)
 	foreach my $transcript ($SCF_GENE->Feature->transcripts) { # take each transcript
 	    ++$model;
-	    my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
-							Feature => $transcript,	# this fills all of the FeatureI methods
-							canvas_name => 'finished',
-							canvas => $SeqCanvas->FinishedCanvas,
-							map => $SeqCanvas->FinishedMap,
-							label => $SeqCanvas->label,
-						    ); # create a new SeqcanvasFeature object for this feature
+	    my $SCF_transcript = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
+									Feature => $transcript,	# this fills all of the FeatureI methods
+									canvas_name => 'finished',
+									canvas => $SeqCanvas->FinishedCanvas,
+									map => $SeqCanvas->FinishedMap,
+									label => $SeqCanvas->label,
+							       ); # create a new SeqcanvasFeature object for this feature
 	    # it is assigned an FID during creation
-	    $SCF->offset($SeqCanvas->current_offsets->{"transcript$model"}); # assign standard color and offset according to ordinal number
-	    $SCF->color($SCF->transcript_color); # get the transcript default color
-	    $SCF->_draw;
-            $SCF->parent_gene($SCF_GENE);
-            push @transcripts, $SCF;
+	    $SCF_transcript->offset($SeqCanvas->current_offsets->{"transcript$model"}); # assign standard color and offset according to ordinal number
+	    $SCF_transcript->color($SCF_transcript->transcript_color); # get the transcript default color
+	    $SCF_transcript->_draw;
+            $SCF_transcript->parent_gene($SCF_GENE);
+            push @transcripts, $SCF_transcript;
 			
 	    foreach my $exon ($transcript->exons) {
 		my $SCF = Bio::Tk::SeqCanvasFeature->new(	SeqCanvas => $SeqCanvas,
@@ -221,7 +221,7 @@ sub _drawThyselfOnFinished {
 		$SCF->color($SeqCanvas->current_colors->{$SCF->source}); # assign color according to the source tag
 		$SCF->_draw;
 		$SCF->parent_gene($SCF_GENE);
-            	$SCF->parent_transcript($transcript);
+            	$SCF->parent_transcript($SCF_transcript);
             	push @exons, $SCF;
 				
 	    }
@@ -238,7 +238,7 @@ sub _drawThyselfOnFinished {
 		$SCF->color($SeqCanvas->current_colors->{$SCF->source}); # assign color by source tag
 		$SCF->_draw;
 		$SCF->parent_gene($SCF_GENE);
-            	$SCF->parent_transcript($transcript);
+            	$SCF->parent_transcript($SCF_transcript);
             	push @promotors, $SCF;
 		
 	    }
@@ -256,7 +256,7 @@ sub _drawThyselfOnFinished {
 		$SCF->color($SeqCanvas->current_colors->{$SCF->source}); # assign color by source tag
 		$SCF->_draw;
 		$SCF->parent_gene($SCF_GENE);
-            	$SCF->parent_transcript($transcript);
+            	$SCF->parent_transcript($SCF_transcript);
             	push @polyAs, $SCF;
 				
 	    }	
