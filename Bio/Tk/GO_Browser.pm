@@ -418,6 +418,7 @@ sub showKeys {
 						sub {
 							my $Annotation = GO_Annotation->new(id => $acc, term => $term, def => $def); # create a new, partially filled annotation object
 							$self->Annotation($Annotation);  # encapsulate it so that it can be retrieved from outside.
+							undef $Annotation;
 						});
 			
 			

@@ -56,7 +56,7 @@ Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca) and Dave Block (dblock@gene.pbi.nrc.
  use Bio::SeqFeature::Gene::Exon;
  use Bio::SeqFeature::Gene::Transcript;
  use Bio::SeqFeature::Gene::GeneStructure;
- use SeqCanvas2;
+ use SeqCanvas;
  Begin();
  MainLoop;
 
@@ -76,7 +76,7 @@ Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca) and Dave Block (dblock@gene.pbi.nrc.
 
  # Draw the Map
  my $axis_length = 800;  # how large I want the final map to be
- $MapObj = Bio::Tk::SeqCanvas2->new(
+ $MapObj = Bio::Tk::SeqCanvas->new(
  	$axis_length,
  	$Frame,
  	$lblSysMess,
@@ -184,8 +184,8 @@ GeneMarkHMM" not just "GeneMarkHMM")
     my $exon2 = new Bio::SeqFeature::Gene::Exon (-start => 4400, -end => 6000, -primary_tag => "exon", -source => "genscan", -strand => -1);
     my $exon3 = new Bio::SeqFeature::Gene::Exon (-start => 3000, -end => 4000, -primary_tag => "exon", -source => "genemark", -strand => -1);
     my $exon4 = new Bio::SeqFeature::Gene::Exon (-start => 5000, -end => 6000, -primary_tag => "exon", -source => "genemark", -strand => -1);
-    my $polyA = Bio::SeqFeature::Generic->new(-start => 2500, -end => 2800, -primary_tag=> "polyA", -source => "polyA-scan", -strand => -1);
-    my $prom = Bio::SeqFeature::Generic->new(-start => 6200, -end => 6500, -primary_tag=> "promoter", -source => "prom-find", -strand => -1);
+    my $polyA = Bio::SeqFeature::Generic->new(-start => 2500, -end => 2800, -primary=> "polyA", -source => "polyA-scan", -strand => -1);
+    my $prom = Bio::SeqFeature::Generic->new(-start => 6200, -end => 6500, -primary=> "promoter", -source => "prom-find", -strand => -1);
     my $transcript = Bio::SeqFeature::Gene::Transcript->new(-start => 2500, -end => 6500, -primary_tag => "transcript", -source => "transcript", -strand => -1);
     my $transcript2 = Bio::SeqFeature::Gene::Transcript->new(-start => 2500, -end => 6500, -primary_tag => "transcript", -source => "transcript", -strand => -1);
     $transcript->add_promoter($prom);
@@ -577,13 +577,13 @@ sub new {
     # the sub-frame to hold the zoom-bar
     $self->ZoomFrame($frame->Frame->pack(-side => 'bottom', -fill => 'x'));
     if ($self->{-orientation} eq "horizontal"){
-    	$self->SeqFrame($frame->Frame->pack(-side => 'top', expand => 1, -fill => 'x')); # the frame to hold the sequence text
+    	#$self->SeqFrame($frame->Frame->pack(-side => 'top', expand => 1, -fill => 'x')); # the frame to hold the sequence text
     	$self->ScrollFrame($frame->Frame->pack(-side => 'bottom', -fill => 'x'));
     } else {
-    	$self->SeqFrame($frame->Frame->pack(-side => 'left', expand => 1, -fill => 'y')); # the frame to hold the sequence text
+    	#$self->SeqFrame($frame->Frame->pack(-side => 'left', expand => 1, -fill => 'y')); # the frame to hold the sequence text
     	$self->ScrollFrame($frame->Frame->pack(-side => 'right', -fill => 'y'));
     }
-    $self->MapFrame($frame->Frame->pack(-side => 'top')); # the sub-frame to hold the two maps
+    $self->MapFrame($frame->Frame->pack(-side => 'top', -expand => 1, -fill => "both")); # the sub-frame to hold the two maps
 
     # assign some additional values required by the Canvas and AnnotMap
     # ***************** TEMPORARY HACK
@@ -627,16 +627,16 @@ sub new {
        	$self->dxb($window_length); # height is unchanged
         $self->fxb($window_length); # height is unchanged
 
-       	my $DLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both');	# frame for Draft map and labels
-       	my $FLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both');	# frame for Finished map and labels
+       	my $DLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);	# frame for Draft map and labels
+       	my $FLF = $self->MapFrame->Frame->pack(-side => 'top', -fill => 'both', -expand => 1);	# frame for Finished map and labels
        	
-       	$self->DraftLabelCanvas($DLF->Canvas(-width => 100, -height => $map_width, -background => "#ffffff")->pack(-side => 'left', -fill => 'both'));
-       	$self->DraftCanvas($DLF->Canvas(-width => $window_length, -height => $map_width, -background => "#ffffff")->pack(-side => 'left', -fill => 'both'));
-       	my $Dyscrollbar = $DLF->Scrollbar('-orient' => 'vertical','-command' => sub {$self->DraftLabelCanvas->yview(@_);$self->DraftCanvas->yview(@_)})->pack(-side => 'left', '-fill'=>'y', '-expand' => 'y');
+       	$self->DraftLabelCanvas($DLF->Canvas(-width => 100, -height => $map_width, -background => "#ffffff")->pack(-side => 'left', -fill => 'both', -expand => 1));
+       	$self->DraftCanvas($DLF->Canvas(-width => $window_length, -height => $map_width, -background => "#ffffff")->pack(-side => 'left', -fill => 'both', -expand => 1));
+       	my $Dyscrollbar = $DLF->Scrollbar('-orient' => 'vertical','-command' => sub {$self->DraftLabelCanvas->yview(@_);$self->DraftCanvas->yview(@_)})->pack(-side => 'left', '-fill'=>'y', '-expand' => 1);
        	
-       	$self->FinishedLabelCanvas($FLF->Canvas(-width => 100, -height => $map_width, -background => "#eeeeff")->pack(-side => 'left', -fill => 'both'));
-       	$self->FinishedCanvas($FLF->Canvas(-width => $window_length, -height => $map_width, -background => "#eeeeff")->pack(-side => 'left', -fill => 'both'));
-       	my $Fyscrollbar = $FLF->Scrollbar('-orient' => 'vertical','-command' => sub {$self->FinishedLabelCanvas->yview(@_);$self->FinishedCanvas->yview(@_)})->pack(-side => 'left', '-fill'=>'y', '-expand' => 'y');
+       	$self->FinishedLabelCanvas($FLF->Canvas(-width => 100, -height => $map_width, -background => "#eeeeff")->pack(-side => 'left', -fill => 'both', -expand => 1));
+       	$self->FinishedCanvas($FLF->Canvas(-width => $window_length, -height => $map_width, -background => "#eeeeff")->pack(-side => 'left', -fill => 'both', -expand => 1));
+       	my $Fyscrollbar = $FLF->Scrollbar('-orient' => 'vertical','-command' => sub {$self->FinishedLabelCanvas->yview(@_);$self->FinishedCanvas->yview(@_)})->pack(-side => 'left', '-fill'=>'y', '-expand' => 1);
        	
        	$self->DraftLabelCanvas->configure('-yscrollcommand' => ['set' => $Dyscrollbar] );
         $self->FinishedLabelCanvas->configure('-yscrollcommand' => ['set' => $Fyscrollbar] );
