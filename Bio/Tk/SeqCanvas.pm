@@ -1230,15 +1230,10 @@ sub _receiveDropCreateNewGene {
 	}
 
 	my $Gene = $self->BioPerlFeatureTypes->{Gene}->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");  	
-# 	my $Trans = $self->BioPerlFeatureTypes->{Transcript}->new(-start => $start, -end => $stop, -strand => $strand, -primary => "gene", -source => "SeqCanvas");
-# 	foreach my $feature(values %features){
-# 		next unless $feature;
-# 		if ($feature->isa("Bio::SeqFeature::Gene::Exon")){$Trans->add_exon($feature)}
-# 		if ($feature->isa("Bio::SeqFeature::Gene::Poly_A_site")){$Trans->poly_A_site($feature)}
-# 		if ($feature->isa("Bio::SeqFeature::Gene::Promoter")){$Trans->add_promoter($feature)}
-# 		if ($feature->isa("Bio::SeqFeature::Gene::UTR")){$Trans->add_utr($feature)}			
-# 	}
-	$Gene=$self->MapSeq->add_SeqFeature($Gene)||$Gene;  #if new $Gene is returned, use it
+	$retval=$self->MapSeq->add_SeqFeature($Gene);
+	if ($retval->isa($self->BioPerlFeatureTypes->{Gene})) {
+	    $Gene=$retval;
+	}
 	$Gene->add_transcript_as_features(values %features);
 	$self->DropHighlighted(undef);
 	return $self->mapFeatures(undef, [$Gene]);
