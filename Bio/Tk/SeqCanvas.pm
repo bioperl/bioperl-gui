@@ -158,12 +158,12 @@ use vars qw(@ISA $AUTOLOAD);
 require Bio::Tk::BioTkPerl8_1;        # requires version 0.81 of Gregg Helt's Bio::TkPerl (can be obtained from BioPerl website)
 				      # note that this is NOT the version available directly from Berkeley!!
 
-Tk::Widget->Construct('DrawableBioSequence');
+Tk::Widget->Construct('SeqCanvas');
 
 
 @ISA=qw(Bio::Tk::AnnotMap Bio::SeqI);
 
-$Bio::Tk::SeqCanvas::VERSION='0.01';
+$Bio::Tk::SeqCanvas::VERSION='1.0';
 
 {
 	#Encapsulated class data
@@ -183,10 +183,11 @@ $Bio::Tk::SeqCanvas::VERSION='0.01';
 		chartreuse => '#aacc00',
 		yellowgreen => '#669900',
 		black => '#000000',
+		brown => '#994444',
 		dkgreen => '#00aa00',
 		ltgreen => '#ddffdd',
 	 );
-	 my @colorlist = qw(darkblue magenta dkgreen fuschia orange purple chartreuse lightblue yellowgreen turquoise green yellow black ltgreen);
+	 my @colorlist = qw(darkblue magenta dkgreen fuschia orange purple chartreuse lightblue yellowgreen turquoise green yellow brown ltgreen);
 	
 	
 	#___________________________________________________________
@@ -559,6 +560,7 @@ sub new {
 }
 
 sub _bindMultiSelection {
+
     my ($self) = @_;
     # the line below converts the x/y coordinates of the event into the canvas coordinates
     $self->DraftCanvas->Tk::bind("<ButtonPress-1>" => 
@@ -1733,7 +1735,7 @@ sub recolorWithTag {
 sub assignCustomColors {
     my ($self, $top) = @_;
     return if (!$top);
-    return if (ref($top) =~ /MainWindow/);
+    return if (!ref($top) =~ /MainWindow/);
     my ($FID, $strand, $source, $DB_ID) = $self->getSelectedTags;
     return if (!$source);
     my $cedit;
@@ -1742,7 +1744,7 @@ sub assignCustomColors {
 			       sub {
 				   my $color = $_[1];
 				   $self->current_colors->{$source} = $color;
-				   print "new color for $source is " ,
+				   #print "new color for $source is " ,
 				          $self->current_colors->{$source} . "\n";
 				   $self->recolorWithTag('default', 'draft', ["Source $source"]);
 				   $self->recolorWithTag('default', 'finished', ["Source $source"]);
