@@ -23,8 +23,9 @@ Bio::Tk::SeqCanvas.pm - (v3.0) Graphical display of SeqI objects
  my $lblSysMess = $MW->Label()->pack(-side => 'bottom', -fill => 'both');
 
  # create a BioSeq object
+ # (note:  the test file used below is in the /t/ folder) 	
   	
- my $SIO = Bio::SeqIO->new(-file=> 'genbankfile.gb', -format => 'genbank');
+ my $SIO = Bio::SeqIO->new(-file=> 'testseq.gb', -format => 'genbank');
  my $SeqObj = $SIO->next_seq();
 
  # Draw the Map
@@ -308,6 +309,7 @@ use Bio::Tk::AnnotMap;
 use Tk::widgets qw(ColorEditor);
 use Bio::SeqI;
 use Bio::SeqIO;
+use Bio::SeqFeature::Exon;
 use Bio::SeqFeature::Gene::Exon;
 use Bio::SeqFeature::Gene::Transcript;
 use Bio::SeqFeature::Gene::GeneStructure;
