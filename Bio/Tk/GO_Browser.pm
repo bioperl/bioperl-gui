@@ -19,7 +19,9 @@ Bio::Tk::GO_Browser.pm - Browser of the GO ontology
    my $GO = GO_Browser_tree->new($frame);
  
    my $Annotation;
-   $GO->browser->bind("<Double-Button-1>" => sub {
+
+   # note that Button-1 events must be bound with <<...>>, not <...> 
+   $GO->events->bind("<<Double-Button-1>>" => sub {
      $Annotation = $GO->annotation; # see Bio::Tk::GO_Annotation
      my $acc = $GO->acc;          # retrieve acc of term
      my $term_name = $GO->name;   # retrieve name of term
@@ -30,20 +32,38 @@ Bio::Tk::GO_Browser.pm - Browser of the GO ontology
      print "Definition $def\n";
      print "Public Acc " . $TERM->public_acc . "\n";
     });
+
+   $GO->events->bind("<Button-3>" => sub {
+     print "GO Acc under mouse was ", $GO->public_acc;
+	 # do something cool here...
+	 });
  } 
 
 
 =head1 DESCRIPTION and ACKNOWLEDGEMENTS
 
 Fills a Tk::Frame widget with a browsable display of the GO ontology (http://www.geneontology.org/).
-Items in red are "branches", while items in green are "leaves" of the GO ontology tree.  Numbers
+terms in green (default) have child terms, while terms in red (default) are "leaves" of the GO ontology tree.  Numbers
 after the term name indicate the number of gene products annotated below that node.
- * Single-Clicking on a term displays the definition of a term.
- * Clicking the +/- boxes open and close sub-branches of the tree.
- * Double-clicking on any element records the clicked-upon term and
- definition (if available) and this event can be trapped by the
- top-level windowing system to retrieve this info for whatever
- external application you are building.
+
+=over
+
+=item *
+
+Single-Clicking on a term displays the definition of a term.
+
+=item *
+
+Clicking the +/- boxes open and close sub-branches of the tree.
+
+=item *
+
+Double-clicking on any element records the clicked-upon term and
+definition (if available) and this event can be trapped by the
+top-level windowing system to retrieve this info for whatever
+external application you are building.
+
+=back
 
 This module uses "the awesome power" of the go_perl API.  Many thanks to Chris Mungall for taking
 the time to write a comprehensive and beautifully functional API to the GO ontology database.
@@ -107,6 +127,25 @@ done against the term name, definition, and synonym(?)
 
 =cut
 
+=head1 BINDING EVENTS
+
+A reference to the frame widget is stored in the 'events' method of the $GO object.
+This can be used to bind widget events externally. See synopsis for examples of event
+binding.  Button 1 events (single and double clicking) must be trapped as virtual
+events (double-bracketed) using the form:
+
+ <<Button-1>> or <<Double-Button-1>>
+
+Non Button-1 events may be bound normally using:
+
+ <Button-2> or <Double-Button-2>
+
+Single Button-2 and Button-3 clicks alter the current underlying $GO term object,
+according to what was clicked over, but other events *do not* alter the underlying
+current $GO term object! (i.e. it will be whatever it was when it was last
+clicked).  You have been warned!!
+
+=cut
 
 =head1 APPENDIX
 
@@ -115,6 +154,18 @@ Since most of the methods deal with extracting data from a GO::Model::Term
 object, these methods are called using the same function names to keep things clear.
 
 =cut
+
+=head2 GO::Model::Term methods
+
+GO_Browser implements all methods of GO::Model::Term objects.
+The method is applied to whichever term is selected in the display
+
+  eg.  $GO_Browser->public_acc() returns the GO accession id of the selected term.
+
+Other methods of GO_Browser are listed below...
+
+=cut
+
 
 =head2 new
 
@@ -141,53 +192,6 @@ object, these methods are called using the same function names to keep things cl
 =cut
 
 
-=head2 acc
-
- Title     : acc
- Usage     : my $acc = $GO->acc
- Function  : return the GO accession number of the selected term
- Returns   : Integer
- Args      :
-
-
-=cut
-
-
-=head2 name
-
- Title     : name
- Usage     : my $name = $GO->name
- Function  : return the GO term name of the selected term
- Returns   : scalar
- Args      :
-
-
-=cut
-
-
-=head2 definition
-
- Title     : definition
- Usage     : my $def = $GO->definition
- Function  : return the definition (if available) of the selected term
- Returns   : Integer
- Args      :
-
-
-=cut
-
-
-=head2 public_acc
-
- Title     : public_acc
- Usage     : my $pubacc = $GO->public_acc
- Function  : return the full GO accession number (eg GO:00003876)
- Returns   : scalar
- Args      :
-
-
-=cut
-
 
 =head2 term
 
@@ -211,7 +215,7 @@ object, these methods are called using the same function names to keep things cl
 
 =cut
 
-package GO_Browser_tree;
+package GO_Browser;
 
 use strict;
 use Carp;
@@ -247,16 +251,13 @@ use vars qw(@ISA @EXPORT); #keep 'use strict' happy
 					height			=>	["30", 		'read/write'],
 					width			=>	["70", 		'read/write'],
 					frame			=>	[undef, 	'read/write'],
+					events			=>	[undef, 	'read/write'],
 					browser			=>	[undef, 	'read/write'],
 					def_text		=>	[undef, 	'read/write'],
 					query_text		=>	[undef, 	'read/write'],
 					GO_API			=>	[undef, 	'read/write'],
-					path			=>	[undef, 	'read/write'],
-					name			=>	[undef,		'read/write'],
 					term	 		=>	[undef, 	'read/write'],
-					acc				=>	[undef, 	'read/write'],
-					definition		=>	[undef, 	'read/write'],					
-					public_acc		=>	[undef, 	'read/write'],
+					path	 		=>	[undef, 	'read/write'],
 					Annotation		=>	[undef, 	'read/write'],
 					count			=>	[undef, 	'read/write'], # count, deep, undef
 					
@@ -340,6 +341,7 @@ sub new {
     }
 
 	$self->frame($frame);
+	$self->events($frame);
 	$self->frame->Busy;$self->frame->update;
 
 	# we might need to determine the host 'on the fly'
@@ -405,10 +407,27 @@ sub new {
 					-height => $self->height,
 					-width => $self->width,
 					-background => $self->background,
-					-browsecmd => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->browsed($path);$self->frame->Unbusy}, 
+					-browsecmd => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->browsed($path);$self->events->eventGenerate("<<Button-1>>");$self->frame->Unbusy}, 
 					-opencmd  => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->clickedOpen($path);$self->frame->Unbusy},			
-					-command => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->selectEntry($path);$self->frame->Unbusy},
+					-command => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->selectEntry($path);$self->events->eventGenerate("<<Double-Button-1>>");$self->frame->Unbusy},
 					));
+
+	$self->browser->bind("<Button-3>" => sub {	my $widget = shift;
+												my $x=$widget->XEvent->x;
+												my $y=$widget->XEvent->y;
+												my $path = $self->browser->nearest($y);
+												$self->browsed($path);
+												$self->events->eventGenerate("<Button-3>");
+											});
+	
+	$self->browser->bind("<Button-2>" => sub {	my $widget = shift;
+												my $x=$widget->XEvent->x;
+												my $y=$widget->XEvent->y;
+												my $path = $self->browser->nearest($y);
+												$self->browsed($path);
+												$self->events->eventGenerate("<Button-2>");
+											});
+
 	
 	foreach (($fullroots)) {
 		my $label = $_->name;
@@ -423,6 +442,9 @@ sub new {
 	$self->def_text->pack(-side => 'bottom', -fill => 'x');
 	$query_frame->pack(-side => 'top', -expand => 0, -fill => 'x');
 	$self->browser->pack(-side => 'top', -expand => 1, -fill => "both");
+
+
+	
 
 	$self->frame->Unbusy;
     return $self;
@@ -524,12 +546,8 @@ sub _fill_in_details {
 	return unless $TERM;						# this would be a problem with the Go database
 	$self->def_text->delete('1.0'	, 'end');  	# erase current contents and write the definition into the text box
 	$self->def_text->insert('end', ($TERM->definition));
-	$self->name($term);
 	$self->term($TERM);
 	$self->path($path);
-	$self->definition($TERM->definition);
-	$self->acc($TERM->acc);
-	$self->public_acc($TERM->public_acc);
 	if ($self->TopWindow){$self->TopWindow->configure(-title => $TERM->public_acc . " " . $self->name);}
 }
 
@@ -550,7 +568,181 @@ sub do_query {
 		$self->addTreeNode($graph, "select");
 	}
 	$self->frame->Unbusy;
+}
+
+sub product_list {
+	my ($self) = @_;
+	my $TERM = $self->term;
+	my $products = $TERM->product_list;
+	return $products;  
+
 }	
-	
+
+
+# ********  implement all of GO::Model::Term interfaces
+
+sub type {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->type(@args);
+}
+
+sub definition {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	my $def = $TERM->definition(@args);
+	$self->def_text->delete('1.0'	, 'end');  	# erase current contents and write the definition into the text box
+	$self->def_text->insert('end', $def);
+	return $TERM->definition;
+}
+
+sub name {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	unless ($args[0]) {return $TERM->name};
+	my $name = $args[0];
+	$TERM->name(@args);
+	$self->browser->delete('entry', $self->path);
+	my $term = $self->GO_API->get_term({name => $name}, "shallow");
+	my $graph = $self->GO_API->get_graph_by_terms(-terms=>[$term], -depth => 1, -template => {acc=>1, -name => 1});
+	$self->addTreeNode($graph);
+	return $TERM->name;
+}
+
+sub description {
+	my ($self, @args) = @_;
+	return $self->name(@args);
+}
+
+sub acc {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->acc(@args);
+}
+
+sub public_acc {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	$TERM->public_acc(@args);
+	if ($self->TopWindow){$self->TopWindow->configure(-title => $TERM->public_acc . " " . $self->name);}
+	return $TERM->public_acc;
+}
+
+sub has_synonym {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->has_synonym(@args);
+}
+
+sub add_synonym {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->add_synonym(@args);
+}
+
+sub synonym_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->synonym_list(@args);
+}
+
+sub add_obselete {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->add_obselete(@args);
+}
+
+sub obselete_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->obselete_list(@args);
+}
+
+sub add_dbxref {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->add_dbxref(@args);
+}
+
+sub dbxref_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->dbxref_list(@args);
+}
+
+sub is_obselete {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->is_obselete(@args);
+}
+
+sub is_root {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->is_root(@args);
+}
+
+sub association_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->association_list(@args);
+}
+
+sub selected_asociation_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->selected_asociation_list(@args);
+}
+
+sub add_association {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->add_association(@args);
+}
+
+sub add_selected_association {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->add_selected_association(@args);
+}
+
+sub association_hash {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->association_hash(@args);
+}
+
+sub n_associations {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->n_associations(@args);
+}
+
+sub product_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->product_list;
+}
+
+sub deep_product_list {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->deep_product_list(@args);
+}
+
+sub n_deep_products {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->n_deep_products(@args);
+}
+
+sub n_products {
+	my ($self, @args) = @_;
+	my $TERM = $self->term;
+	return $TERM->n_products(@args);
+}
+
+
+
 			
 1;
