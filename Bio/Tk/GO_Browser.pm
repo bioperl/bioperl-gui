@@ -118,7 +118,7 @@ use vars qw($AUTOLOAD);
                   (	GOText 			=> [undef,			'read/write'],   # the text box
                     QueryText		=> [undef, 			'read/write'],   # the query box
                     DefText			=> [undef, 			'read/write'],   # the definition of the term
-                    query_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record $key's leading to our current position
+                    query_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record ->fetchall_arrayref's leading to our current position
                     ObjectType		=> [undef, 			'read/write'],	 # this can be called from a Tk::Text widget, or a Tk::Scrolled("Text") widget, which affects the binding calls in showKeys
                   	Term			=> [undef, 			'read/write'],	 # the GO Ontology term just middle-clicked upon
                   	Definition		=> [undef, 			'read/write'],	 # the definition of the term just middle-clicked upon
@@ -239,7 +239,7 @@ sub new{
     $self ->ObjectType(((ref($self->GOText) eq "Tk::Text")?"Text":"Scrolled")); # set object type to Text or Scrolled widget (Scrolled is actually a Tk::Frame object)
 	
 
-	$self->_set_queries;  # this creates and compiles all queries
+	$self->_set_queries;  # this creates and pre-compiles all standard queries.  Search queries have to be generated "on the fly"
 												
 	$self->showKeys("GO Ontology", $self->query_root);  # show the keys at root level
 
@@ -252,12 +252,14 @@ sub query_root {  # query the root level.  This is just a quick way to get back 
 
 	$self->root_query->execute($variable);  # a single variable, 'root' is effectively hard coded here
 	my %GO_hash;
-	my ($def, $acc, $term, $children, $root_acc);
-	while (($def, $acc, $term, $children) = $self->root_query->fetchrow_array){
+	my ($def, $acc, $term, $children);
+	my @QueryResults = @{$self->root_query->fetchall_arrayref};
+	foreach my $row(@QueryResults){
+		($def, $acc, $term, $children) = @{$row};
 		$GO_hash{$acc} = [$term, $def, $children];
 	}
 	
-	return ($self->root_query, [$variable],\%GO_hash);
+	return (\@QueryResults, \%GO_hash);
 }
 
 
@@ -266,11 +268,14 @@ sub do_query {   # gets the query statement handle and the variable,
 	my ($self, $sth, $variables) = @_;
 	my (@variables) = @{$variables};  # b.t.w. the first variable is *usually* the GO-term acc
 	$sth->execute(@variables);        # execute the query sent
+	my ($def, $acc, $term, $children);
+	my @QueryResults = @{$sth->fetchall_arrayref};
 	my %GO_hash;
-	while (my ($def, $acc, $term, $children) = $sth->fetchrow_array){ # fetch the def, accession number, GO term, and number of children of each node
-		$GO_hash{$acc} = [$term, $def, $children];                    # make a hash of them
+	foreach my $row(@QueryResults){
+		($def, $acc, $term, $children) = @{$row};
+		$GO_hash{$acc} = [$term, $def, $children];
 	}
-	return ($sth, $variables, \%GO_hash);                             # return the hash, along with the variables that were used to create it
+	return (\@QueryResults, \%GO_hash);                             # return the hash, along with the variables that were used to create it
 }                                                                     # these will be pushed onto a stack (or have been pulled off of a stack)
 
 sub query_keywords {
@@ -278,27 +283,69 @@ sub query_keywords {
 	# it queries the GO_term text, synonym text, and definition text
 	# all matches are shown in the box
 	# multiple keywords are combined with "OR" at the moment.
-	
+my $init_query = "select
+					definition,
+					child.acc,
+					child.name,
+					count(term2.term1_id)
+					from term as parent,
+					term as child,
+					term2term as relation
+						left join
+						term_synonym as syn
+						on syn.term_id = child.id
+							left join
+							term_definition as def
+							on def.term_id = child.id
+								left join
+								term2term as term2
+								on child.id = term2.term1_id ";
+my $WHERE = "WHERE ";
+my $query_param = "((def.definition Like ? OR
+					syn.synonym Like ? OR
+					child.name Like ?) AND
+					parent.id = relation.term1_id and
+					child.id = relation.term2_id) ";
+my $GROUP_BY = " group by child.acc";
+
 	my ($self) = @_;
 	my $keywords = $self->QueryText->get('1.0', 'end'); # get the keywords
 	chomp $keywords;                                    # get rid of \n
 	$keywords =~ s/,/ /g;                               # get rid of commas (if any)
 	my @keywords = split /\s+/, $keywords;              # split on space into individual keywords
-	my @GO_hash; my $query_keys;
-	foreach my $key(@keywords){                         # for each keyword do the query
-		$query_keys .= "$key ";
-		$key = "% ".$key." %";                          # wil become a LIKE '% .. %' term in the SQL statement
-		my ($sth, $vars, $Hash) = $self->do_query($self->keyword_query, [$key, $key, $key]); # SQL statement requires three variables for term, synonym, and def
-		push @GO_hash, %{$Hash};                        # result is added to the hash (hence the keywords are joined by 'OR')
+	return if ($#keywords == -1); 						# exit if no search terms
+	my @GO_hash; my @keys;
+	
+	my $query = $init_query . $WHERE;	# initialize the query
+	foreach my $key(@keywords){         # for each keyword add the query parameter to the query
+		$key = "%".$key."%";          # each keyword separated by spaces
+		push @keys, ($key, $key, $key); # need it three times per keyword
+		$query .= $query_param . "AND ";  # ready for another keyword
 	}
-	#print "\ndone\n";
-	#unshift @{$self->{query_stack}}, ["QUERY $query_keys", [$self->keyword_query, \@keywords]];  # this query must be added to the stack
-	undef $self->{query_stack};  # empty the stack so that reversing is no longer possible
-	$self->showKeys ("QUERY $query_keys", $self->keyword_query, \@keywords,\@GO_hash);  # now show the result
+	$query =~ s/[\n\t]+/ /g;  # get rid of all that crap
+	$query =~ /(.*)(AND\s)$/;              # catch the last OR
+	$query = $1;                          # and remove it
+	$query .= $GROUP_BY;                 # add the final group-by statement
+	
+	my $sth = $self->dbh->prepare($query);  # now compile the query
+	$sth->execute(@keys);                   # execute it
+	
+	my ($def, $acc, $term, $children);
+	my %GO_hash;
+	my @QueryResults = @{$sth->fetchall_arrayref};  # get result
+	
+	foreach my $row(@QueryResults){          # parse results
+		($def, $acc, $term, $children) = @{$row};
+		$GO_hash{$acc} = [$term, $def, $children];  # into the hash
+	}
+	$self->TopWindow->configure(-title => "Query: $keywords");   # configure the title
+	$self->TopWindow->update;
+ 	$self->showKeys("Query: $keywords", \@QueryResults, \%GO_hash); # show result
 
 }
+
 sub showKeys {
-	my ($self, $current_term, $current_sth, $variables, $GO_hashref) = @_;    # hash is {acc}={term} where acc is eg. "8150", which is effectively "O:0008150" in the XML docs
+	my ($self, $current_term, $QueryResult, $GO_hashref) = @_;    # hash is {acc}={term} where acc is eg. "8150", which is effectively "O:0008150" in the XML docs
 	my %GO_hash;
 	if (ref($GO_hashref) =~ "HASH"){
 		 %GO_hash = %{$GO_hashref};    # get the hash of things to display
@@ -325,10 +372,9 @@ sub showKeys {
 		$Text->insert("end", "../                        \n", ["parent"]);	# TO MOVE UP THE TREE
 		$Text->tagConfigure("parent", -foreground => "yellow");
       	$Text->tagBind("parent", "<Double-Button-1>",
-      			sub {my ($grandparent_term, $query_ref) = @{shift @{$self->{query_stack}}};   	# take off of the stack the verbose TERM of the grandparent, and the query parameters
-      				 my ($grandparent_sth, $variables) = @{$query_ref};    # take the query object and associated variables our of the queryref
+      			sub {my ($grandparent_term, $QueryResult, $GO_hashref) = @{shift @{$self->{query_stack}}};   	# take off of the stack the verbose TERM of the grandparent, and the query parameters
       				
-      				$self->showKeys($grandparent_term, $self->do_query($grandparent_sth, $variables));  # then call this routine with the parents query and variables
+      				$self->showKeys($grandparent_term, $QueryResult, $GO_hashref);  # then call this routine with the parents query and variables
       				$self->TopWindow->configure(-title => $grandparent_term);
       				$self->TopWindow->update;
       				}
@@ -354,11 +400,9 @@ sub showKeys {
 			if ($children > 0){	                                 # if this term has children then it is not a leaf
 				$Text->tagConfigure($acc, -foreground => "red"); # if it is not a leaf, then make it red
 				$Text->tagBind($acc, "<Double-Button-1>",
-						sub {unshift @{$self->{query_stack}}, [$current_term, [$current_sth, $variables]];  # stack this term, the query, and the varibles for that query
+						sub {unshift @{$self->{query_stack}}, [$current_term, $QueryResult, $GO_hashref];  # stack this term, the query, and the varibles for that query
 							chomp $term;                                  # remove the newline character we added
-							my $this_query_type = $self->tree_query;	   # make it clear what we are using
-							
-							$self->showKeys($term, $self->do_query($this_query_type, [$acc]));# then execute the standard tree query using this child's acc
+							$self->showKeys($term, $self->do_query($self->tree_query, [$acc]));# then execute the standard tree query using this child's acc
 						 	$self->TopWindow->configure(-title => $term);$self->TopWindow->update;
 						 }
 						);
@@ -441,32 +485,6 @@ sub _set_queries {
 												child.id = relation.term2_id
 												group by child.acc
 											"));
-											
-											
-	$self->keyword_query($self->dbh->prepare("select
-											definition,
-											child.acc,
-											child.name,
-											count(term2.term1_id)
-											from term as parent,
-											term as child,
-											term2term as relation
-												left join
-													term_synonym as syn
-													on syn.term_id = child.id
-												left join
-													term_definition as def
-													on def.term_id = child.id
-												left join
-													term2term as term2
-													on child.id = term2.term1_id
-													WHERE
-													(def.definition Like ? OR
-													syn.synonym Like ? OR
-													child.name Like ?) AND
-													parent.id = relation.term1_id and
-													child.id = relation.term2_id
-													group by child.acc"));
 												
 }
 
