@@ -1847,9 +1847,12 @@ sub getSelectedIDs {
  Title   : getSelectedTags
  Usage   : ($FeatureID, $strand, $source, 
 	    $type, $canvas [, $DB_ID]) = $MapObj->getSelectedTags
- Returns : FeatureID, Source, Strand, Type (i.e. Primary_tag),
-    Canvas ('draft' or 'finished'), 
-    and Database_Index (if available).
+ Returns : FeatureID,   # the id of the mapped widget
+           Strand,      # BioPerl strand 1,0,-1
+           Source,      # source_tag
+           Type,        # primary_tag
+           Canvas,      # 'draft' or 'finished'
+           Database_Index  # if available
  Comment : This is to be used for single-selection events only!
  Args    : none		
 
@@ -2173,7 +2176,7 @@ sub assignCustomColors {
     my ($self, $top) = @_;
     return if (!$top);
     return if (!ref($top) =~ /MainWindow/);
-    my ($FID, $strand, $source, $DB_ID) = $self->getSelectedTags;
+    my ($FID, $strand, $source, $type, $canvas, $DB_ID) = $self->getSelectedTags;
     return if (!$source);
     my $cedit;
     $cedit = $top->ColorEditor(-title => "chose a new color for the $source features",
