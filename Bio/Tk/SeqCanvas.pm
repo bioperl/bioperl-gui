@@ -430,13 +430,13 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     InitialSources		=>  [['hand_annotation'],		'read/write'],
                     BioPerlFeatureTypes	=>  [{
 						"Gene" 			=> "Bio::SeqFeature::Gene::GeneStructure",
-						"Transcript"	=> "Bio::SeqFeature::Gene::Transcript",
+						"Transcript"		=> "Bio::SeqFeature::Gene::Transcript",
 						"Exon" 			=> "Bio::SeqFeature::Gene::Exon",
-						"Intron"		=> "Bio::SeqFeature::Gene::Intron",
+						"Intron"			=> "Bio::SeqFeature::Gene::Intron",
 						"Promoter"		=> "Bio::SeqFeature::Gene::Promoter",
 						"Poly_A_site"	=> "Bio::SeqFeature::Gene::Poly_A_site",
-						"UTR"			=> "Bio::SeqFeature::Gene::UTR",
-						"Non-Coding"	=> "Bio::SeqFeature::Gene::NC_Feature",
+						"UTR"				=> "Bio::SeqFeature::Gene::UTR",
+						"Non-Coding"		=> "Bio::SeqFeature::Gene::NC_Feature",
 											},					'read/write'],
 					Menu				=>  [undef, 			'read/write'], # the menu that contains "Re-Cast Selected As", to allow additions from outside of the module
 					ReCastMenu			=>	[undef, 			'read/write'], # the menu that is cascaded by selecting Re-CastSelected As" to allow re-configuration of callbacks from outside if you are not using generic BioPerl feature objects
@@ -453,7 +453,7 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     finished_total_offset=>	[undef,				'read/write'],   # the largest offset for the finished map
                     draft_total_offset 	=>	[undef,				'read/write'],   # the largest offset for the draft map
                     width				=>	[200,				'read/write'],   # the "width" (perpendicular to the axis) of the maps at the outset
-                    -orientation 		=>  ['horizontal',		'read/write'],
+                    -orientation 		=>  [undef,				'read/write'],
                     whitespace 			=>	[10, 				'read'],         # whitespace is the distance between the axis and the first widget; the default never changes
                     SysMess 			=>	[undef, 			'read/write'],   # this is an (optional) handle back out to a label on the top level window to send system messages
                     dragx1  			=>	[undef, 			'read/write'],
@@ -461,7 +461,7 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
                     dragx2  			=>	[undef, 			'read/write'],
                     dragy2  			=>	[undef, 			'read/write'],
                     def_offset			=>	[10, 				'read/write'],
-                    _activeDelete		=>	["off",				'read/write'], # does pressing the delete key delete the selected features?
+                    _activeDelete		=>	["off",			'read/write'], # does pressing the delete key delete the selected features?
                     DropHighlighted		=>  [undef, 			'read/write'], # this gets set during a drag-n-drop motion event, it holds the FID of a currently mouse-drag-over feature
 
                     );
@@ -573,6 +573,15 @@ $Bio::Tk::SeqCanvas::VERSION='3.0';
 	#	return $_nextid++;
     #}
 
+	my $ori;
+	sub ori {   # the orientation of the canvas has been set... horizontal or vertical.
+		my ($self, $val) = @_;
+		$ori = $val if $val;
+		return $ori;
+	}
+		
+		
+		
     sub next_draft_offset {
     	if (!$_nextDoffset){$_nextDoffset=2}
     	return $_nextDoffset++;     # in this case increment it
@@ -723,8 +732,22 @@ sub new {
     #Create Object
     my $self = bless {}, $class;
 
+    if ($args{-orientation}) {
+		unless ($self->ori){   # orientation may only be set *once*, then it is fixed in that orientation
+			# need to set teh AnnotMap arguments list (-orientation) and the SeqCanvas ori value
+			# to 
+			if ($args{-orientation} =~ /h/i) {$self->{-orientation} = "horizontal"; $self->ori("horizontal")}
+			elsif ($args{-orientation} =~ /v/i) {$self->{-orientation} = "vertical"; $self->ori("vertical")}
+			else {return -4}
+		} else{
+			$self->{-orientation} = $self->ori;  # no matter what is sent in the params, it will be ignored if a cznvas already exists
+		}
+    }
+
+	delete $args{-orientation};
     foreach (keys %args) {
         foreach my $attrname ( $self->_standard_keys ) {
+		next if $attrname eq "-orientation";
 	    if (exists $args{$attrname}) {
 		$self->{$attrname} = $args{$attrname} }
 	    elsif ($caller_is_obj) {
@@ -734,12 +757,7 @@ sub new {
         }
     }
 
-    if ($args{-orientation}) {
-	if ($args{-orientation} =~ /h/i) {$self->{-orientation} = "horizontal"}
-	elsif ($args{-orientation} =~ /v/i) {$self->{-orientation} = "vertical"}
-	else {return -4}
-    }
-
+	
     $self->SysMess($TOP);	# a handle out to the top-level window system for passing messages
 
     # the sub-frame to hold the zoom-bar
