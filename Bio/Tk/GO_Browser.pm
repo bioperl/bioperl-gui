@@ -1,17 +1,70 @@
+=head1 NAME
 
-=head2 NAME
+Bio::Tk::GO_Browser.pm - Browser of the GO ontology
 
-Bio::Tk::GO_Browser.pm - Simplistic browser for GO ontology terms
+=head1 SYNOPSIS
+
+ use Tk;
+ use Bio::Tk::GO_Browser_tree;  # in bioperl-gui from BioPerl
+ require GO::AppHandle;  # you must have the GO perl_api from BDGP
+                         # contact Chris Mungall for details
+                         # (cjm@fruitfly.bdgp.berkeley.edu)
+ 
+ &begin;
+ MainLoop;
+ 
+ sub begin {
+   my $mw = MainWindow->new; 
+   my $frame = $mw->Frame->pack;
+   my $GO = GO_Browser_tree->new($frame);
+ 
+   my $Annotation;
+   $GO->browser->bind("<Double-Button-1>" => sub {
+     $Annotation = $GO->annotation; # see Bio::Tk::GO_Annotation
+     my $acc = $GO->acc;          # retrieve acc of term
+     my $term_name = $GO->name;   # retrieve name of term
+     my $def = $GO->definition;   # retrieve definition for term
+     my $TERM = $GO->term;        # or retrieve the GO::Model::Term object
+     print "Acc# $acc\n";
+     print "Term $term_name\n";
+     print "Definition $def\n";
+     print "Public Acc " . $TERM->public_acc . "\n";
+    });
+ } 
 
 
-=head2 AUTHORS
+=head1 DESCRIPTION and ACKNOWLEDGEMENTS
+
+Fills a Tk::Frame widget with a browsable display of the GO ontology (http://www.geneontology.org/).
+Items in red are "branches", while items in green are "leaves" of the GO ontology tree.  Numbers
+after the term name indicate the number of gene products annotated below that node.
+ * Single-Clicking on a term displays the definition of a term.
+ * Clicking the +/- boxes open and close sub-branches of the tree.
+ * Double-clicking on any element records the clicked-upon term and
+ definition (if available) and this event can be trapped by the
+ top-level windowing system to retrieve this info for whatever
+ external application you are building.
+
+This module uses "the awesome power" of the go_perl API.  Many thanks to Chris Mungall for taking
+the time to write a comprehensive and beautifully functional API to the GO ontology database.
+Contact for go_perl API: Chris Mungall (cjm@fruitfly.bdgp.berkeley.edu).  See also "DEPENDANCIES"
+below.
+
+This is just the beginning!  Using "the awesome power" of the go_perl API I plan to
+greatly enhance the functionality of this browser over the next couple of months.  Please
+send me any requests for additional 'toys' you would like to have in this module.
+
+
+=head1 AUTHORS
 
 Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
 Plant Biotechnology Institute, National Research Council of Canada.
-Version 1: Copyright (c) National Research Council of Canada, October, 2000.
-Version 2: Copyright (c) National Research Council of Canada, March, 2001.
 
-=head2 DISCLAIMER
+ Version 1: Copyright (c) National Research Council of Canada, October, 2000.
+ Version 2: Copyright (c) National Research Council of Canada, March, 2001.
+ Version 3: Copyright (c) National Research Council of Canada, September, 2001.
+
+=head1 DISCLAIMER
 
 Anyone who intends to use and uses this software and code acknowledges and
 agrees to the following: The National Research Council of Canada (herein "NRC")
@@ -21,95 +74,160 @@ or merchantability or fitness for a particular purpose.  NRC shall not be liable
 in any event for any damages, whether direct or indirect,
 consequential or incidental, arising from the use of the software.
 
-=head2 SYNOPSIS
+=cut
 
- use GO_Browser;
- use Tk;
- use strict;
+=head1 NOTE TO AnnotationWorkbench and Genquire USERS
 
- Begin();
+This version of GO_Browser is sufficiently different from the previous versions
+that it was not realistic to attempt to make it backwards compatible, thus it will
+not work with any version of AnnotationWorkbench or Genquire prior to GenquireII.
+If you require an earlier version of GO_Browser, please contact Mark Wilkinson
+(mwilkinson@gene.pbi.nrc.ca) and I will send you the appropriate version for your
+release of the annotation software.
 
- MainLoop;
+=cut
 
- sub Begin {
+=head1 DEPENDANCIES
 
-  my $Textbox;
-  my $GO;
-    	
-  # create new main window.
-  my $mw = MainWindow->new(-title => "GO Ontology Browser");
-  my $frame = $mw->Frame()->pack(-fill => 'both', -expand => 1);  		
+GO_Browser uses Chris Mungall's API modules.  These can be downloaded from BDGP.
+Browse to http://www.fruitfly.org/annot/go/database/ and follow the links to
+"GO Database Toolkits" for the location of these files, and instructions for
+obtaining them via CVS.
 
-  # create new GO browser
-  # NOTE that the browser is now created inside of a frame, instead of with a text widget
-  $GO = GO_Browser->new($frame, TopWindow => $mw);
-    		
-    			
-  # set up binding of button-2 to retrieve information
-  # NOTE the difference in the binding call compared to version 1.0
-  my $Annotation;
-  $GO->GOText->bind("<Button-2>" => sub {
-       $Annotation = $GO->Annotation; # retrieve the annotation object (see GO_Annotation.pm)
-       my $acc = $Annotation->GO_id;
-       my $term = $Annotation->term;
-       my $def = $Annotation->def;
-       print "Acc = $acc Term = $term Def = $def\n\n";
-       });
-    	
- }
+MS Windows users:  it is possible to set up CVS on MS Windows!  It just takes 
+a bit of effort! 
 
+=cut
 
+=head1 QUERIES
 
-=head2 DESCRIPTION and ACKNOWLEDGEMENTS
-
-Fills a Tk::Frame widget with a browsable display of the GO ontology (http://www.geneontology.org/).
-Items in red are "branches", while items in green are "leaves" of the GO ontology tree.
-* Single-Clicking displays the definition of a term.
-* Double-clicking branches moves you up and down the tree.
-* Middle-clicking on any element records the
-clicked-upon term and definition (if available) and this event can be trapped by the top-level windowing
-system to retrieve this info for whatever external application you are building.
-
-Unlike previous versions, this browser connects directly to the GO ontology database.
-Therefore it requires no pre-downloading and parsing of the XML files (halleluja!)
-
-Because it is connecting "live" there is sometimes a small delay while the query is being
-sent over the net.  The number of queries required for the browser
-has been mitigated as much as possible by some clever left-joins
-written by Dave Block (dblock@gene.pbi.nrc.ca).  Thanks Dave!
-
-=head2 CONTACT
-
-Mark Wilkinson (mwilkinson@gene.pbi.nrc.ca)
-
-=head2 Options
-
- $GO = GO_Browser->new(
-   $Frame,          	# the Tk Frame widget
-   TopWindow => $mw,   # the top-level window (or undef)
-   GO_IP => "headcase.lbl.gov",  # the IP address of your GO database
-   GO_dbName => "go"   # the name of the GO database
- );
-
-=head2 Methods
-
- $GO->GOAcc	# returns Accession number of the middle-clicked term
- $GO->Term   # returns the Term name of the middle-clicked term
- $GO->Definition  # returns the associated definition
+At the moment you can query single or comma-delimited multiple words (AND).
+Matching terms are highlighted in the tree.  It appears that queries are
+done against the term name, definition, and synonym(?)
 
 =cut
 
 
-package GO_Browser;
+=head1 APPENDIX
+
+The remaining documentation details deal with the object methods.
+Since most of the methods deal with extracting data from a GO::Model::Term
+object, these methods are called using the same function names to keep things clear.
+
+=cut
+
+=head2 new
+
+ Title     :	new
+ Usage     :	my $GO = GO_Browser_tree->new($frame, %args)
+ Function  :	return a GO browser object
+ Returns   :	Bio::Tk::GO_Browser object
+ Args      :	
+      $Frame,     		# an existing Tk Frame widget (required)
+      TopWindow   => $top,	# optional - MainWindow object
+      dbname      => $db, 	# optional - database name (default "go")
+      host        => $host,	# optional - default determined at run time
+      leaf_color  => $color	# optional - default "darkgreen"
+      branch_color=> $color	# optional - default "red"
+      background  => $color	# optional - default "white"
+      textbg      => $color	# optional - default "blue"
+      textfg      => $color	# optional - default "white"
+      height      => $high	# optional - default 30
+      width       => $wide	# optional - default 70
+      GO_API      => $apph	# optional - existing API AppHandle
+      count       => $count	# optional - "shallow", "deep"; counts # mapped gene products
+
+
+=cut
+
+
+=head2 acc
+
+ Title     : acc
+ Usage     : my $acc = $GO->acc
+ Function  : return the GO accession number of the selected term
+ Returns   : Integer
+ Args      :
+
+
+=cut
+
+
+=head2 name
+
+ Title     : name
+ Usage     : my $name = $GO->name
+ Function  : return the GO term name of the selected term
+ Returns   : scalar
+ Args      :
+
+
+=cut
+
+
+=head2 definition
+
+ Title     : definition
+ Usage     : my $def = $GO->definition
+ Function  : return the definition (if available) of the selected term
+ Returns   : Integer
+ Args      :
+
+
+=cut
+
+
+=head2 public_acc
+
+ Title     : public_acc
+ Usage     : my $pubacc = $GO->public_acc
+ Function  : return the full GO accession number (eg GO:00003876)
+ Returns   : scalar
+ Args      :
+
+
+=cut
+
+
+=head2 term
+
+ Title     : term
+ Usage     : my $TERM = $GO->term
+ Function  : return the GO::Model::Term object of the selected term
+ Returns   : GO::Model::Term object
+ Args      :
+
+
+=cut
+
+=head2 annotation
+
+ Title     : annotation
+ Usage     : my $ANNOT = $GO->annotation
+ Function  : return a Bio::Tk::GO_Annotation object of the selected term
+ Returns   : Bio::Tk::GO_Annotation object
+ Args      :
+
+
+=cut
+
+package GO_Browser_tree;
 
 use strict;
-use Tk;
-use Tk::Text;
 use Carp;
-use DBI;
+use vars qw($AUTOLOAD);
+use Tk;
+use Tk::Label;
+use Tk::Tree;
+use Tk::ItemStyle;
+use GO::AppHandle;
+use LWP::UserAgent;
 use Bio::Tk::GO_Annotation;
 
-use vars qw($AUTOLOAD);
+require Exporter;
+use vars qw(@ISA @EXPORT); #keep 'use strict' happy
+@ISA = qw(Exporter); 
+@EXPORT = qw(new);
 
 
 {
@@ -118,24 +236,35 @@ use vars qw($AUTOLOAD);
 	#___________________________________________________________
 	#ATTRIBUTES
     my %_attr_data = #     				DEFAULT    	ACCESSIBILITY
-                  (	GOText 			=> [undef,			'read/write'],   # the text box
-                    QueryText		=> [undef, 			'read/write'],   # the query box
-                    DefText			=> [undef, 			'read/write'],   # the definition of the term
-                    query_stack		=> [[], 			'read/write'],   # because there are multiple paths through the tree, record ->fetchall_arrayref's leading to our current position
-                    ObjectType		=> [undef, 			'read/write'],	 # this can be called from a Tk::Text widget, or a Tk::Scrolled("Text") widget, which affects the binding calls in showKeys
-                  	TopWindow		=> [undef, 			'read/write'],
-                  	dbh				=> [undef, 			'read/write'],
-                  	GO_IP			=> ['headcase.lbl.gov', 'read/write'],
-                  	GO_dbName		=> ['go',			'read/write'],
-                  	tree_query		=> [undef, 			'read/write'],   # compiled query to step down a branch to next node
-                  	root_query		=> [undef, 			'read/write'],   # compiled query to go to root
-                  	keyword_query	=> [undef, 			'read/write'],   # compiled query to search for a keyword
-                  	Annotation		=> [undef, 			'read/write'],
-                  	
-                  );
+                  (	TopWindow		=>	[undef, 	'read/write'],
+					dbname 			=>	["go", 		'read/write'],
+					host 			=>	[undef, 'read/write'],
+					leaf_color		=>	["darkgreen", 	'read/write'],
+					branch_color	=>	["red",		'read/write'],
+					background		=>	["white", 	'read/write'],
+					textbg			=>	["darkblue",'read/write'],
+					textfg			=>	["white",	'read/write'],
+					height			=>	["30", 		'read/write'],
+					width			=>	["70", 		'read/write'],
+					frame			=>	[undef, 	'read/write'],
+					browser			=>	[undef, 	'read/write'],
+					def_text		=>	[undef, 	'read/write'],
+					query_text		=>	[undef, 	'read/write'],
+					GO_API			=>	[undef, 	'read/write'],
+					path			=>	[undef, 	'read/write'],
+					name			=>	[undef,		'read/write'],
+					term	 		=>	[undef, 	'read/write'],
+					acc				=>	[undef, 	'read/write'],
+					definition		=>	[undef, 	'read/write'],					
+					public_acc		=>	[undef, 	'read/write'],
+					Annotation		=>	[undef, 	'read/write'],
+					count			=>	[undef, 	'read/write'], # count, deep, undef
+					
+                    );
 
    #_____________________________________________________________
-    #METHODS, to operate on encapsulated class data
+
+    # METHODS, to operate on encapsulated class data
 
     # Is a specified object attribute accessible in a given mode
     sub _accessible  {
@@ -155,6 +284,7 @@ use vars qw($AUTOLOAD);
     }
 
 }
+
 sub AUTOLOAD {
     no strict "refs";
     my ($self, $newval) = @_;
@@ -165,12 +295,12 @@ sub AUTOLOAD {
     if ($self->_accessible($attr,'write')) {
 
 	*{$AUTOLOAD} = sub {
-	    if ($_[1]) { $_[0]->{$attr} = $_[1] }
+	    if (defined $_[1]) { $_[0]->{$attr} = $_[1] }
 	    return $_[0]->{$attr};
 	};    ### end of created subroutine
 
 ###  this is called first time only
-	if ($newval) {
+	if (defined $newval) {
 	    $self->{$attr} = $newval
 	}
 	return $self->{$attr};
@@ -186,314 +316,241 @@ sub AUTOLOAD {
     croak "No such method: $AUTOLOAD";
 }
 
-sub dbAccess {
-    my ($self) = @_;
-    my $GO_IP = $self->GO_IP;
-    my $GO_dbName = $self->GO_dbName;
-	my ($dsn) = "DBI:mysql:$GO_dbName:$GO_IP";
-	my $dbh = DBI->connect($dsn,undef,undef, {RaiseError => 1}) or die "can't connect to database";
-	$dbh or die "\n\n GO-database connection failed \n\n";
-	
-	return $dbh;
+sub DESTROY {
+	my $self = shift;
+	undef $self;
 }
 
-
-sub new{
+sub new {
 	my ($caller, $frame, %args) = @_;
-	my ($GO);
-	return -2 if ((ref($frame) ne "Tk::Frame"));
+
+	unless ($frame->isa('Tk::Frame')){print "must be initialised with an exising Tk::Frame object as the first argument\n"; return 0};
 	
 	my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
-    my $self = $frame;
-    $self = bless {}, $class;
+	my $self = bless {}, $class;
 
-
-    # initialize object
     foreach my $attrname ( $self->_standard_keys ) {
-    	if (exists $args{$attrname}) {
+	if (exists $args{$attrname}) {
 		$self->{$attrname} = $args{$attrname} }
     elsif ($caller_is_obj) {
 		$self->{$attrname} = $caller->{$attrname} }
     else {
 		$self->{$attrname} = $self->_default_for($attrname) }
     }
-    #  OBJECT INITIALIZED
 
-    # now fill it
-    my $QueryFrame = $frame->Frame();
-    my $GOFrame = $frame->Frame();
-    my $DefFrame = $frame->Frame();
-	$QueryFrame->Label(-text => "Query Keywords", -background => 'white', -foreground => 'black')->pack(-side => 'left', -fill => 'x', -expand => 1);
-	$self->QueryText($QueryFrame->Text(-width => "25", -background => 'blue', -foreground => 'white', -height => 1)->pack(-side => 'left', -fill => 'x', -expand => 1));
-    $QueryFrame->Button(-text => "Search", -command => sub {$self->query_keywords})->pack(-side => 'right');
-    $self->GOText($GOFrame->Scrolled("Text", -background => "black")->pack(-fill => "both", -expand => 1));
-    $self->DefText($DefFrame->Scrolled("Text", -width => 25, -background => 'blue', -foreground => 'white',-height => 5, -wrap => 'word')); 
-	$self->DefText->insert("end", "\n\n\n");
-	$self->DefText->pack(-fill => 'both', -expand => 1);
-    # retrieve the GO database handle
-    my $dbh = $self->dbAccess;
-    $self->dbh($dbh);
+	$self->frame($frame);
+	$self->frame->Busy;$self->frame->update;
 
-    # the line below *should* be deprecated now... but i am not entirely certain...
-    # object tuype should always be Scrolled as far as I understand.  This
-    # is only important w.r.t. the tweaking of bindings at the end of of sub showKeys{}
-    $self ->ObjectType(((ref($self->GOText) eq "Tk::Text")?"Text":"Scrolled")); # set object type to Text or Scrolled widget (Scrolled is actually a Tk::Frame object)
+	# we might need to determine the host 'on the fly'
+	# this can be done by a call to the server.cfg, which
+	# returns the database type and hostname (eg:  mysql sin.lbl.gov)
+	unless ($self->host){	
+		my $ua = new LWP::UserAgent;
+		my $req = new HTTP::Request GET => 'http://www.fruitfly.org/annot/go/database/server.cfg';
+        $req->content('match=www&errors=0');
+		my $res = $ua->request($req);
+
+        if ($res->is_success) {
+            my $resp =  $res->content;
+			my $host = ($resp =~ /\w+\s+(.*)/ && $1);
+			$self->host($host);
+		}
+		unless ($self->host){
+			warn "unable to determine host name from BDGP website\n";
+			return 0;
+		}       
+	}
 	
+	unless ($self->GO_API){$self->GO_API(GO::AppHandle->connect(-dbname => $self->dbname, -dbhost => $self->host))};
+	unless ($self->GO_API){
+		warn "unable to connect to the GO database at " . ($self->host) . "\n";
+		return 0;
+	}
+	
+	my $fullroots = $self->GO_API->get_root_term;
+	
+	$self->def_text($self->frame->Scrolled("Text",
+								-height => 4,
+								-scrollbars => "sw",
+								-wrap => "word",
+								-background => $self->textbg,
+								-foreground => $self->textfg));
 
-	$self->_set_queries;  # this creates and pre-compiles all standard queries.  Search queries have to be generated "on the fly"
-												
-	$self->showKeys("GO Ontology", $self->query_root);  # show the keys at root level
 
-	$QueryFrame->pack(-side => 'top', -fill => 'x', -expand => 1);
-    $GOFrame->pack(-side => 'top', -fill => 'both', -expand => 1);
-    $DefFrame->pack(-side => 'top', -fill => 'both', -expand => 1);
+	# set up the three Query frame elements - a label, a text box, and a button
+	my $query_frame = $frame->Frame();
+	my $label = $query_frame->Label(-text => "Query:", -background => "white", -foreground => "black");
+	$label->pack(-side => 'left', -expand => 0);
+	my $query_button = $query_frame->Button(-text => "execute", -command => sub {$self->do_query});
+	
+	$query_button->pack(-side => 'right', -expand => 0);
+	
+	$self->query_text($query_frame->Text(
+								-height => 1,
+								-background => $self->textbg,
+								-foreground => $self->textfg));
+	$self->query_text->pack(-side => 'left', -expand => 1, -fill => 'x');
+	# end of query frame things.
 
-	$frame->update;
-    return $self;                     # return handle to self
+	
+	$self->frame->ItemStyle('text', -stylename => 'branch', -foreground => $self->leaf_color, -background => $self->background);
+	$self->frame->ItemStyle('text', -stylename => 'leaf', -foreground => $self->branch_color, -background => $self->background);
+
+	$self->browser($self->frame->Scrolled('Tree', 
+					-itemtype   => 'text',
+					-separator  => '|',
+					-selectmode => 'multiple',
+					-indicator => 1,
+					-height => $self->height,
+					-width => $self->width,
+					-background => $self->background,
+					-browsecmd => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->browsed($path);$self->frame->Unbusy}, 
+					-opencmd  => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->clickedOpen($path);$self->frame->Unbusy},			
+					-command => sub {my $path = shift; $self->frame->Busy; $self->frame->update; $self->selectEntry($path);$self->frame->Unbusy},
+					));
+	
+	foreach (($fullroots)) {
+		my $label = $_->name;
+		$self->browser->add($_->name, -text=>$label );
+		$self->browser->setmode($_->name, "close");
+	}
+
+	my $graph = $self->GO_API->get_graph_by_terms(-terms=>[$fullroots], -depth=>1, -template => {acc=>1, name=>1});
+
+	$self->addTreeNode($graph);
+
+	$self->def_text->pack(-side => 'bottom', -fill => 'x');
+	$query_frame->pack(-side => 'top', -expand => 0, -fill => 'x');
+	$self->browser->pack(-side => 'top', -expand => 1, -fill => "both");
+
+	$self->frame->Unbusy;
+    return $self;
+
 }
 
-sub query_root {  # query the root level.  This is just a quick way to get back to root using it's own SQL statement
+sub addTreeNode {
+	my ($self, $graph, $select) = @_;
+	
+	my $leaf_terms = $graph->get_leaf_nodes;
+	foreach my $term(@{$leaf_terms}){
+		my $children = $graph->n_children($term->acc);
+		my $paths = $graph->paths_to_top($term->acc);
+		foreach my $path(@{$paths}){
+			$self->_addPathToTree($path, $term, $children, $select);
+		}
+	}
+}	
+
+sub browsed {
+	my ($self, $path) = @_;
+	return unless $path;  						# pipe-delimited string of term names
+	$self->_fill_in_details($path);				# extract all info about this term and store it in $self to allow viewing from outside of this module
+}
+
+sub clickedOpen {
+	my ($self, $path) = @_;
+	if ($self->browser->info('children', $path)){
+		foreach $path($self->browser->info('children', $path)){
+			$self->browser->show("entry", $path);
+		}
+		#return;
+	}	
+	#print "$path\n";
+	my $name = ($path =~ /.*\|(.*)$/ && $1);
+	my $term = $self->GO_API->get_term({name => $name}, "shallow");
+	my $graph = $self->GO_API->get_graph_by_terms(-terms=>[$term], -depth => 1, -template => {acc=>1, -name => 1});
+	$self->addTreeNode($graph);
+}
+
+
+sub _addPathToTree {
+	# takes a $path object and converts it to a string that is
+	# readable by the Tree widget (text delimited by |)
+	my ($self, $path, $term, $children, $select) = @_;
+	my @revpath = reverse @{$path->term_list};
+	my $browser = $self->browser;
+	my $termstring;
+	
+	foreach my $node(@revpath){
+		$termstring .= $node->name;
+		if ($browser->info("exists", $termstring)){
+			$browser->setmode($termstring, "close");
+			$browser->show("entry", $termstring);
+		}
+		else {
+			my $extra;
+			if ($self->count eq "deep"){$extra =  "(".($self->GO_API->get_deep_product_count({term=>$node})).")"}
+			elsif ($self->count eq "shallow"){$extra = "(".($self->GO_API->get_product_count({term=>$node})).")"}		
+			$browser->add($termstring, -text=>($node->name . $extra));
+			$browser->entryconfigure($termstring, -style=>'branch');
+			$browser->setmode($termstring, "close");
+			$browser->show("entry", $termstring);
+		};
+		$termstring .= "|";
+	}
+	$termstring .=  $term->name;	
+	unless ($browser->info("exists", $termstring)){
+		my $extra;
+		if ($self->count eq "deep"){$extra =  "(".($term->n_deep_products).")"}
+		elsif ($self->count eq "shallow"){$extra = "(".($term->n_products).")"}		
+		$browser->add($termstring, -text => (($term->name) . $extra));
+		my $openclose = ($children)?"open":"close";
+		$browser->setmode($termstring, $openclose);
+		if ($children){
+			$browser->entryconfigure($termstring, -style=>'branch')
+		} else {
+			$browser->entryconfigure($termstring, -style=>'leaf');
+			$browser->setmode($termstring, "none");
+		};
+	}
+	$browser->show("entry", $termstring);
+	if ($select){$browser->selectionSet($termstring)}
+}
+
+sub selectEntry {
+	my ($self, $path) = @_;
+	$self->_fill_in_details($path);
+}
+
+sub _fill_in_details {
+	my ($self, $path) = @_;
+	return unless $path;  						# pipe-delimited string of term names
+
+	my $term = ($path =~ /.*\|(.*)$/ && $1);  	# get the last one
+	unless ($term){$path =~ /(Gene\_Ontology)/} # the above might fail, so check that we are not at root
+	return unless $term;						# the term text string may fail to be found... I hope not!
+	my $TERM = $self->GO_API->get_term({name => $term}, {acc=>1, definition=>1}); # get the term OBJECT
+	return unless $TERM;						# this would be a problem with the Go database
+	$self->def_text->delete('1.0'	, 'end');  	# erase current contents and write the definition into the text box
+	$self->def_text->insert('end', ($TERM->definition));
+	$self->name($term);
+	$self->term($TERM);
+	$self->path($path);
+	$self->definition($TERM->definition);
+	$self->acc($TERM->acc);
+	$self->public_acc($TERM->public_acc);
+	if ($self->TopWindow){$self->TopWindow->configure(-title => $TERM->public_acc . " " . $self->name);}
+}
+
+sub annotation {
 	my ($self) = @_;
-	my $variable = 'root';
-
-	$self->root_query->execute($variable);  # a single variable, 'root' is effectively hard coded here
-	my %GO_hash;
-	my ($def, $acc, $term, $children);
-	my @QueryResults = @{$self->root_query->fetchall_arrayref};
-	foreach my $row(@QueryResults){
-		($def, $acc, $term, $children) = @{$row};
-		$GO_hash{$acc} = [$term, $def, $children];
-	}
-	
-	return (\@QueryResults, \%GO_hash);
+	my $Annotation = GO_Annotation->new(id => $self->acc, term => $self->name, def => $self->definition); # create a new, partially filled annotation object
+	return $Annotation;
 }
 
-
-sub do_query {   # gets the query statement handle and the variable,
-					# executes an arbitrary query, and then returns the result
-	my ($self, $sth, $variables) = @_;
-	my (@variables) = @{$variables};  # b.t.w. the first variable is *usually* the GO-term acc
-	$sth->execute(@variables);        # execute the query sent
-	my ($def, $acc, $term, $children);
-	my @QueryResults = @{$sth->fetchall_arrayref};
-	my %GO_hash;
-	foreach my $row(@QueryResults){
-		($def, $acc, $term, $children) = @{$row};
-		$GO_hash{$acc} = [$term, $def, $children];
-	}
-	return (\@QueryResults, \%GO_hash);                             # return the hash, along with the variables that were used to create it
-}                                                                     # these will be pushed onto a stack (or have been pulled off of a stack)
-
-sub query_keywords {
-	# this is called by typing search terms into the search box and clicking "search"
-	# it queries the GO_term text, synonym text, and definition text
-	# all matches are shown in the box
-	# multiple keywords are combined with "OR" at the moment.
-my $init_query = "select
-					def.term_definition,
-					child.acc,
-					child.name,
-					count(term2.term1_id)
-					from term as parent,
-					term as child,
-					term2term as relation
-						left join
-						term_synonym as syn
-						on syn.term_id = child.id
-							left join
-							term_definition as def
-							on def.term_id = child.id
-								left join
-								term2term as term2
-								on child.id = term2.term1_id ";
-my $WHERE = "WHERE ";
-my $query_param = "((def.term_definition Like ? OR
-					syn.term_synonym Like ? OR
-					child.name Like ?) AND
-					parent.id = relation.term1_id and
-					child.id = relation.term2_id) ";
-my $GROUP_BY = " group by child.acc";
-
+sub do_query {
 	my ($self) = @_;
-	my $keywords = $self->QueryText->get('1.0', 'end'); # get the keywords
-	chomp $keywords;                                    # get rid of \n
-	$keywords =~ s/,/ /g;                               # get rid of commas (if any)
-	my @keywords = split /\s+/, $keywords;              # split on space into individual keywords
-	return if ($#keywords == -1); 						# exit if no search terms
-	my @GO_hash; my @keys;
-	
-	my $query = $init_query . $WHERE;	# initialize the query
-	foreach my $key(@keywords){         # for each keyword add the query parameter to the query
-		$key = "%".$key."%";          # each keyword separated by spaces
-		push @keys, ($key, $key, $key); # need it three times per keyword
-		$query .= $query_param . "AND ";  # ready for another keyword
+	my $query = $self->query_text->get('1.0', "end");
+	my @param = split ",",$query;
+	$self->frame->Busy;
+	foreach my $param(@param){
+		$param = ($param =~ /\s*(.*)\s*/ && $1);
+		my $graph = $self->GO_API->get_graph_by_search("*$param*", 1, {acc=>1, name=>1});
+		$self->addTreeNode($graph, "select");
 	}
-	$query =~ s/[\n\t]+/ /g;  # get rid of all that crap
-	$query =~ /(.*)(AND\s)$/;              # catch the last OR
-	$query = $1;                          # and remove it
-	$query .= $GROUP_BY;                 # add the final group-by statement
+	$self->frame->Unbusy;
+}	
 	
-	my $sth = $self->dbh->prepare($query);  # now compile the query
-	$sth->execute(@keys);                   # execute it
-	
-	my ($def, $acc, $term, $children);
-	my %GO_hash;
-	my @QueryResults = @{$sth->fetchall_arrayref};  # get result
-	
-	foreach my $row(@QueryResults){          # parse results
-		($def, $acc, $term, $children) = @{$row};
-		$GO_hash{$acc} = [$term, $def, $children];  # into the hash
-	}
-	$self->TopWindow->configure(-title => "Query: $keywords");   # configure the title
-	$self->TopWindow->update;
- 	$self->showKeys("Query: $keywords", \@QueryResults, \%GO_hash); # show result
-
-}
-
-sub showKeys {
-	my ($self, $current_term, $QueryResult, $GO_hashref) = @_;    # hash is {acc}={term} where acc is eg. "8150", which is effectively "O:0008150" in the XML docs
-	my %GO_hash;
-	if (ref($GO_hashref) =~ "HASH"){
-		 %GO_hash = %{$GO_hashref};    # get the hash of things to display
-	} else {
-		 %GO_hash = @{$GO_hashref};    # get the hash of things to display
-    }
-
-	$self->DefText->delete('1.0', 'end');  # clear the contents of the definition box
-							
-	my $Text = $self->GOText;       # get the text-box reference
-	$Text->configure(-state => "normal");  # empty it and make it writable
-	$Text->delete("1.0", "end");
-	
-	$Text->insert("end", "/                         \n", ["root"]);     # make the '/' root level symbol
-   	$Text->tagConfigure("root", -foreground => "yellow");  				# TO GO TO ROOT
-   	$Text->tagBind("root", "<Double-Button-1>",                         # bind the double-click
-   			sub {undef $self->{query_stack};                             # delete everything from the stack
-   				$self->showKeys("GO Ontology", $self->query_root);      # refresh the browser with the root contents
-   				$self->TopWindow->configure(-title => "GO Ontology");   # configure the title
-   				$self->TopWindow->update;
-   			});
-	
-	unless ($#{$self->{query_stack}} < 0){                                   # IF THERE IS NO TREE TO MOVE UP THEN DONT DO THIS
-		$Text->insert("end", "../                        \n", ["parent"]);	# TO MOVE UP THE TREE
-		$Text->tagConfigure("parent", -foreground => "yellow");
-      	$Text->tagBind("parent", "<Double-Button-1>",
-      			sub {my ($grandparent_term, $QueryResult, $GO_hashref) = @{shift @{$self->{query_stack}}};   	# take off of the stack the verbose TERM of the grandparent, and the query parameters
-      				
-      				$self->showKeys($grandparent_term, $QueryResult, $GO_hashref);  # then call this routine with the parents query and variables
-      				$self->TopWindow->configure(-title => $grandparent_term);
-      				$self->TopWindow->update;
-      				}
-      			);
-   	}
-   	
-	foreach my $acc(keys %GO_hash){					# ask for the sub-level keys--> there are always two:  term and definition
 			
-			my ($term, $def, $children) = @{$GO_hash{$acc}};  # take the term phrase of the sub-level
-			$term .= "\n";
-			$Text->insert('end', $term, [$acc]);           # print it,and tag it with its key GO:nnnnnn
-			
-			$def = "No Definition Available" if (!$def);
-  			
-			# bind the single-click to writing the definition into the DefText box
-  			$Text->tagBind($acc, "<Button-1>",
-  					sub {$self->DefText->delete('1.0', 'end');
-  						$self->DefText->insert('end', $def);
-  						$self->DefText->update;
-  						}
-  					);
-			
-			if ($children > 0){	                                 # if this term has children then it is not a leaf
-				$Text->tagConfigure($acc, -foreground => "red"); # if it is not a leaf, then make it red
-				$Text->tagBind($acc, "<Double-Button-1>",
-						sub {unshift @{$self->{query_stack}}, [$current_term, $QueryResult, $GO_hashref];  # stack this term, the query, and the varibles for that query
-							chomp $term;                                  # remove the newline character we added
-							$self->showKeys($term, $self->do_query($self->tree_query, [$acc]));# then execute the standard tree query using this child's acc
-						 	$self->TopWindow->configure(-title => $term);$self->TopWindow->update;
-						 }
-						);
-			} else {
-				$Text->tagConfigure($acc, -foreground => "green");  # if it is a leaf, then color it green
-			}
-			
-						
-			$Text->tagBind($acc, "<Button-2>",                      # bind the middle button
-						sub {
-							my $Annotation = GO_Annotation->new(id => $acc, term => $term, def => $def); # create a new, partially filled annotation object
-							$self->Annotation($Annotation);  # encapsulate it so that it can be retrieved from outside.
-							undef $Annotation;
-						});
-			
-			
-			if ($self->ObjectType eq "Scrolled"){     # use this if called as a Scrolled text widget
-				my @framebindings = $Text->bindtags;
-				unshift @framebindings, ('parent', 'root');
-				$Text->bindtags(\@framebindings);
-				my @bindings = $Text->Subwidget("text")->bindtags();
-				shift @bindings;  # get rid of the Tk::Text binding itself to prevent highlighting of the sequence
-				unshift @bindings, 'parent';
-				unshift @bindings, 'root';
-				$Text->Subwidget("text")->bindtags(\@bindings);
-			} else {									# use this if called as a normal text widget
-				#print "\nwrong widget type created - this is an ugly error!\n";
-				$Text->bindtags(['all',
-								'.',
-								'parent',               # changed the order of binding
-								'root', '.text',]); 	# because the text-box itself will respond to
-			}                                           # double-clicks by highlighting the entire text!
-			
-			# put baloon-definitions here - not yet implemented
-			#$Text->tagBind($key, "<Enter>")
-	} # end of foreach my $acc
-}
-
-sub _set_queries {
-	my ($self) = @_;
-	$self->tree_query($self->dbh->prepare("select
-											def.term_definition,
-											child.acc,
-											child.name,
-											count(term2.term1_id)
-											from term as parent,
-											term as child,
-											term2term as relation
-											left join
-												term_definition as def
-												on def.term_id= child.id
-												left join
-													term2term as term2
-													on child.id=term2.term1_id
-													where
-													parent.acc = ? and
-													parent.id = relation.term1_id and
-													child.id = relation.term2_id
-													group by child.acc"));
-													
-													
-	$self->root_query($self->dbh->prepare("select
-										def.term_definition,
-										child.acc,
-										child.name,
-										count(term2.term1_id)
-										from term as parent,
-										term as child,
-										term2term as relation
-											left join
-											term_definition as def
-											on
-											def.term_id = child.id
-												left join
-												term2term as term2
-												on child.id=term2.term1_id
-												where
-												parent.term_type = ? and
-												parent.id = relation.term1_id and
-												child.id = relation.term2_id
-												group by child.acc
-											"));
-												
-}
-
 1;
-
