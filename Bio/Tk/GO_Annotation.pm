@@ -25,26 +25,35 @@ consequential or incidental, arising from the use of the software.
     def => "this is a biological process"
     );
 
-  my @refs;
-  push @refs, "Wilkinson, et al., Development, 2000";
-  push @refs, "Schwarz-Sommer et al., EMBO-J, 2000";
+  my @refs1;
+  my @refs2;
 
-  my $return = $GO_annot->addEvidence("TAS", \@refs);
+  push @refs1, "Wilkinson, et al., Development, 2000";
+  push @refs1, "Schwarz-Sommer et al., EMBO-J, 2000";
+
+  push @refs2, "test2";
+  push @refs2, "test3";
+
+  my $return = $GO_annot->addEvidence("TAS", \@refs1);
   if (!$return){print "addEvidence failed\n"}
   elsif ($return == -1){print "Invalid Evidence Code - no evidence added\n"}
 
+  my $return = $GO_annot->addEvidence("IMP", \@refs1);
+
+  my $return = $GO_annot->addReference("IMP", \@refs2);
   print "GO Accession: " . $GO_annot->GO_id . "  " . $GO_annot->term . "\n";
   print "Definition: " . $GO_annot->def . "\n";
   print "Evidence: \n";
 
-  foreach my $evidence(@{$GO_annot->evidence}){
-     my ($code, $refs) = @{$evidence};
-     print "\tEvidence Type: $code\n";
-     foreach $ref(@{$refs}){
-       print "\t\tReference: $ref\n";
-     }
-  }
+  my %evidence = %{$GO_annot->evidence};
 
+  foreach my $code(keys %evidence){
+     print "\tEvidence Type: $code\n";
+  	foreach my $ref(@{$evidence{$code}}){
+        print "\t\tReference: $ref\n";
+      }
+   }
+  print $GO_annot->gff2_attributes;
 
 =head2 DESCRIPTION and ACKNOWLEDGEMENTS
 
@@ -81,7 +90,7 @@ use vars qw($AUTOLOAD);
                   	def	=>	[undef,		'read/write'],
                   	term=>	[undef, 	'read/write'],
                   	synonyms => [[], 	'read/write'],  # not currently supported
-                  	evidence => [[], 	'read/write'],
+                  	evidence => [{}, 	'read/write'],
                   	GO_id => [undef, 	'read/write'],
                   	
                     );
@@ -231,19 +240,49 @@ sub GO_id {
 	
 =head3 addEvidence
 
-  Usage: $GO_Annotation->addEvidence($code, \@refs);
+  Usage: $GO_Annotation->addEvidence($code, [\@refs]);
   Args: $code - one of IMP,IGI,ISS,IPI,IDA,IEP,IEA,TAS,NAS,NA
+        \@refs - reference to an array of evidence strings
   Returns: 0 if incorrectly called, -1 if invalid code used
-  Comments:  adds evidence and reference strings to the GO object.
+  Comments:  adds evidence code and optional associated references to the GO object.
 
 =cut
 
 sub addEvidence {
 	my ($self, $code, $refs) = @_;
+	return 0 if (!$code);
+	return -1 if (!($code =~ /IMP|IGI|ISS|IPI|IDA|IEP|IEA|TAS|NAS|NA/));
+	if (!(${$self->{evidence}}{$code})){
+		${$self->{evidence}}{$code} = undef
+	};
+	if ($refs){
+		push @{${$self->{evidence}}{$code}}, @{$refs}
+	
+	};
+	
+	return 1;
+
+}
+
+=head3 addReference
+
+  Usage: $GO_Annotation->addReference($code, \@refs);
+  Args: $code - one of IMP,IGI,ISS,IPI,IDA,IEP,IEA,TAS,NAS,NA
+        \@refs - reference to an array of evidence strings
+  Returns: 0 if incorrectly called, -1 if invalid code used
+  Comments:  adds reference(s) to existing evidence codes.
+
+=cut
+
+sub addReference {
+	my ($self, $code, $refs) = @_;
 	return 0 if (!$code || !$refs);
 	return -1 if (!($code =~ /IMP|IGI|ISS|IPI|IDA|IEP|IEA|TAS|NAS|NA/));
+	if (!(${$self->{evidence}}{$code})){
+		${$self->{evidence}}{$code} = undef
+	};
+	push @{${$self->{evidence}}{$code}}, @{$refs};
 	
-	push @{$self->{evidence}}, [$code, $refs];
 	return 1;
 
 }
@@ -267,11 +306,12 @@ sub gff2_attributes {
 	my ($self) = @_;
 	my $gff = "ACC \"" . $self->GO_id . "\" ; ";
 	my $c;
-	foreach my $evidence(@{$self->evidence}) {
-		my ($code, $refs) = @{$evidence};
+	my %evidence = %{$self->evidence};
+	
+	foreach my $code (keys %evidence){
 		++$c;
 		$gff .= "EVID$c " . $code;
-		foreach my $ref(@{$refs}){
+		foreach my $ref(@{$evidence{$code}}){
 			$gff .= " \"$ref\" ";
 		}
 		$gff .= " ; ";
@@ -283,12 +323,13 @@ sub gff2_attributes {
 
 =head3 evidence
 
-  Usage: my ($evidence) = $GO_Annotation->evidence();
+  Usage: my $evidence_ref = $GO_Annotation->evidence();
+         my %evidence = %{$GO_Annotation->evidence};
   Args:
-  Returns: $evidence is a reference to an array of [$code, $refs],
-           where $code is the evidence code and $refs is a reference
-           to an array of strings resumably containing references
-           to database entries or journal articles, or whatever.
+  Returns: %evidence is a hash of {$code} = [$ref, $ref2, $ref3...]
+           where $code is the evidence code and $ref's are
+           strings resumably containing references to database
+           entries or journal articles, or whatever.
   Comments:  retrieves the evidence from the annotation object
 
 =cut
